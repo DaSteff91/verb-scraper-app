@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-01-17)
+
+### Features
+
+- **adding-the-first-main-route-and-deleting-the-old-placeholders**: Adding the first main route and
+  deleting the old placeholders
+  ([`fd54998`](https://github.com/DaSteff91/verb-scraper-app/commit/fd54998c61dc61e423ad2c5d7ddb3cf6368e6016))
+
+
 ## v1.1.0 (2026-01-17)
 
 ### Features
