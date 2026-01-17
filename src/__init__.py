@@ -12,7 +12,7 @@ from flask import Flask
 from .config import Config
 from .extensions import db
 
-__version__ = "0.1.0"
+__version__ = "1.2.0"
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
