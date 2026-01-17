@@ -45,18 +45,9 @@ def create_app(config_class: type[Config] = Config) -> Flask:
         db.create_all()  # type: ignore
         logger.info("Database synchronized.")
 
-    @app.route("/")
-    def index() -> str:
-        """Root route to verify the server is up."""
-        logger.info("Root index reached")
-        return f"<h1>Verb Scraper v{__version__}</h1><p>The server is running. Go to <a href='/hello'>/hello</a></p>"
+    from src.routes.main import main_bp
 
-    @app.route("/hello")
-    def hello() -> str:
-        """Simple test route."""
-        # Use a local logger to avoid "unused" warnings for the outer logger if needed
-        logging.getLogger(__name__).info("Hello endpoint reached")
-        return f"Hello! Verb Scraper v{__version__} is running."
+    app.register_blueprint(main_bp)
 
     # Return the app - Pylance should see this as type 'Flask'
     return app
