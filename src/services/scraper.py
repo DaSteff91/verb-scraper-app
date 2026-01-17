@@ -73,25 +73,36 @@ class ConjugacaoScraper:
             if not conjugation_p:
                 return None
 
-            # 4. Extract text, cleaning it as we go
-            # This replicates your original logic but uses BS4's cleaner methods
-            raw_lines = conjugation_p.get_text(separator="\n").split("\n")
+            # 4. Extract text carefully
+            # The site often uses: <p><span>eu</span> <span>vou</span><br>...</p>
+            # We want to keep "eu vou" as one string.
 
-            # Filter out empty strings and whitespace
-            clean_lines = [line.strip() for line in raw_lines if line.strip()]
+            clean_lines: List[str] = []
+
+            # We iterate through each 'line' which is usually separated by <br> tags
+            # but in BS4 it's easier to look at the strings within the p tag.
+
+            # We'll use a more surgical approach:
+            p_text = conjugation_p.encode_contents().decode("utf-8")
+            # Split by <br> or <br/> to get each person's line
+            parts = p_text.replace("<br/>", "<br>").split("<br>")
+
+            for part in parts:
+                # Strip any remaining HTML tags from the part (like the spans)
+                temp_soup = BeautifulSoup(part, "html.parser")
+                text = temp_soup.get_text(separator=" ").strip()
+                if text:
+                    clean_lines.append(text)
 
             # 5. Apply your custom logic (Removing tu and vós)
-            # Standard Portuguese has 6 persons. Indices: 0(eu), 1(tu), 2(ele), 3(nós), 4(vós), 5(eles)
+            # Now clean_lines looks like: ["eu vou", "tu vais", "ele vai", ...]
             if len(clean_lines) >= 6:
-                # We create a new list excluding 2nd person singular and plural
-                # eu, ele/ela, nós, eles/elas
-                filtered_lines = [
-                    clean_lines[0],  # eu
-                    clean_lines[2],  # ele
-                    clean_lines[3],  # nós
-                    clean_lines[5],  # eles
+                return [
+                    clean_lines[0],  # eu vou
+                    clean_lines[2],  # ele vai
+                    clean_lines[3],  # nós vamos
+                    clean_lines[5],  # eles vão
                 ]
-                return filtered_lines
 
             return clean_lines
 
