@@ -1,0 +1,50 @@
+{% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow">
+      <div class="card-body">
+        <h3 class="card-title text-center mb-4">Conjugate Verb</h3>
+
+        <form method="POST">
+          <div class="mb-3">
+            <label for="verb" class="form-label">Verb (Infinitive)</label>
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              id="verb"
+              name="verb"
+              placeholder="e.g., ir"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="mode" class="form-label">Mode</label>
+              <select class="form-select" id="mode" name="mode">
+                <option value="Indicativo" selected>Indicativo</option>
+                <option value="Subjuntivo">Subjuntivo</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="tense" class="form-label">Tense</label>
+              <select class="form-select" id="tense" name="tense">
+                <option value="Presente" selected>Presente</option>
+                <option value="Pretérito Perfeito">Pretérito Perfeito</option>
+                <option value="Futuro do Presente">Futuro do Presente</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              Scrape & Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

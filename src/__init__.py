@@ -9,8 +9,8 @@ from typing import cast
 
 from flask import Flask
 
-from .config import Config
-from .extensions import db
+from src.config import Config
+from src.extensions import db
 
 __version__ = "1.2.0"
 
@@ -38,12 +38,13 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     with app.app_context():
         # noqa: F401 stops "Unused Import" warnings
         # type: ignore stops Pylance from complaining about missing .models
-        from .models import verb  # noqa: F401 # type: ignore
+        from src.models import verb  # noqa: F401 # type: ignore
 
         logger.debug("Creating database tables if they don't exist...")
 
         db.create_all()  # type: ignore
         logger.info("Database synchronized.")
+        logger.info("Verb Scraper v%s initialized.", __version__)
 
     from src.routes.main import main_bp
 
