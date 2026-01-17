@@ -1,0 +1,24 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Database (Keep your data local)
+instance/
+*.db
+
+# OS & IDE
+.vscode/
+.DS_Store
+.env
+
+# Distribution / Build
+dist/
+build/
+*.egg-info/
