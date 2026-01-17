@@ -18,8 +18,9 @@ version_files = [
 ]
 
 [tool.semantic_release]
-version_variable = "src/__init__.py:__version__"
+version_declaration = ["src/__init__.py:__version__"]
 version_toml = ["pyproject.toml:tool.commitizen.version"]
-branch = "main"
+major_on_zero = false
+branch = "master"
 upload_to_pypi = false
 upload_to_release = true
