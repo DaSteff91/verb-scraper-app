@@ -49,5 +49,9 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     app.register_blueprint(main_bp)
 
+    @app.context_processor
+    def inject_version() -> dict[str, str]:
+        return dict(version=__version__)
+
     # Return the app - Pylance should see this as type 'Flask'
     return app

@@ -5,6 +5,7 @@ Main routes (Controller) for the Verb Scraper application.
 import logging
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from src.services.verb_manager import VerbManager
+from src import __version__
 
 # Define the blueprint
 main_bp = Blueprint("main", __name__)
