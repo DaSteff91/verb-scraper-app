@@ -2,6 +2,26 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-01-17)
+
+### Bug Fixes
+
+- **preparing-for-harmonizing-the-semversion-syncing**: Adding already a base html template for
+  flask ui
+  ([`7d909da`](https://github.com/DaSteff91/verb-scraper-app/commit/7d909da1f32caeca1d1166cf9cb8c344d5e7c9d7))
+
+### Chores
+
+- Manual sync of version to v1.2.0
+  ([`b467a21`](https://github.com/DaSteff91/verb-scraper-app/commit/b467a2143891313f79eaa7b5a83fe46c47bf639e))
+
+### Features
+
+- **extending-functionality-and-getting-more-ui-stuff**: Adding files and changing something here
+  and there
+  ([`82a10dd`](https://github.com/DaSteff91/verb-scraper-app/commit/82a10ddcd538e19a33b70efdc49aae36163f148c))
+
+
 ## v1.2.0 (2026-01-17)
 
 ### Features
