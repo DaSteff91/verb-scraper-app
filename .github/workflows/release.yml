@@ -9,6 +9,8 @@ jobs:
   test:
     name: Run Test Suite
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: "ci-testing-key-not-for-production"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
