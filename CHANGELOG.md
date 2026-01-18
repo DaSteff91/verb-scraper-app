@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v1.4.1 (2026-01-18)
+
+### Bug Fixes
+
+- Changing utf 8 format and normalizing white spaces in output fields with multiple scraped words
+  ([`73c1cc1`](https://github.com/DaSteff91/verb-scraper-app/commit/73c1cc12f12d297176b82c24083bc94baaacc3f4))
+
+- Fixing the exporter as well as implementing a switch for brasilian portugues conjugation format
+  ([`4d76001`](https://github.com/DaSteff91/verb-scraper-app/commit/4d760012d9c5d6ffff3d7fc93869aca0f725eb76))
+
+### Chores
+
+- Adding the csv exporter to the project
+  ([`71348c6`](https://github.com/DaSteff91/verb-scraper-app/commit/71348c6b7a1f31a3b343c54fa6b42cce00716a04))
+
+- Manual sync of version to v1.4.0 and fix release config
+  ([`4539aa9`](https://github.com/DaSteff91/verb-scraper-app/commit/4539aa98aa484383c3de1647171f50117f96f580))
+
+
 ## v1.4.0 (2026-01-18)
 
 ### Features
