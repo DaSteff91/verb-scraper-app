@@ -1,89 +1,382 @@
 {% extends "base.html" %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Conjugate Verb</h3>
+<div class="row justify-content-center" x-data="scrapeComponent()">
+  <div class="col-md-8">
+    <!-- 1. Multi-Scraping Toggle -->
+    <div class="form-check form-switch mb-4 d-flex justify-content-center">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="multiToggle"
+        x-model="multiScrape"
+        @change="resetSelections()"
+      />
+      <label class="form-check-label ms-2 fw-bold" for="multiToggle">
+        Enable Multi-Scraping Mode (Bulk)
+      </label>
+    </div>
 
-        <form method="POST" id="scrapeForm">
-          <div class="mb-3">
-            <label for="verb" class="form-label">Verb (Infinitive)</label>
+    <div class="card shadow border-0 overflow-hidden">
+      <div class="card-body p-4 p-md-5">
+        <h3
+          class="card-title text-center mb-5 fw-bold"
+          x-text="multiScrape ? 'Batch Configuration' : 'Conjugate Verb'"
+        >
+          Conjugate Verb
+        </h3>
+
+        <form
+          method="POST"
+          id="scrapeForm"
+          x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
+        >
+          <!-- Verb Input Section -->
+          <div class="mb-5">
+            <label class="form-label fw-bold text-muted small uppercase"
+              >Verb (Infinitive)</label
+            >
             <input
               type="text"
-              class="form-control form-control-lg"
+              class="form-control form-control-lg border-2 shadow-sm"
               id="verb"
               name="verb"
               placeholder="e.g., ir"
               required
               autofocus
-              title="Please use only letters and hyphens"
+              x-model="verb"
             />
-            <div class="form-text">Example: comer, pôr-se, ir</div>
           </div>
 
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="mode" class="form-label">Mode</label>
-              <select
-                class="form-select"
-                id="mode"
-                name="mode"
-                onchange="updateTenses()"
+          <!-- Selection Matrix -->
+          <div class="row g-4">
+            <!-- Mode Selection: Now using Highlighter Pills for both modes -->
+            <div class="col-12">
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
               >
-                <option value="Indicativo" selected>Indicativo</option>
-                <option value="Subjuntivo">Subjuntivo</option>
-              </select>
+                <label class="form-label fw-bold text-muted small uppercase m-0"
+                  >Mode</label
+                >
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <template x-for="m in ['Indicativo', 'Subjuntivo']" :key="m">
+                  <button
+                    type="button"
+                    class="btn btn-sm rounded-pill px-4 py-2 fw-bold transition-all border-2"
+                    :class="selectedModes.includes(m) ? 'btn-primary border-primary shadow' : 'btn-outline-secondary'"
+                    x-text="m"
+                    @click="toggleMode(m)"
+                  ></button>
+                </template>
+              </div>
             </div>
-            <div class="col-md-6 mb-3">
-              <label for="tense" class="form-label">Tense</label>
-              <select class="form-select" id="tense" name="tense">
-                <!-- Options injected by JavaScript -->
-              </select>
+
+            <!-- Tense Selection: Highlighter Pills with "Select All" next to label -->
+            <div class="col-12 mt-5">
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
+              >
+                <label class="form-label fw-bold text-muted small uppercase m-0"
+                  >Tense</label
+                >
+                <!-- Select All only visible in Multi-Mode -->
+                <button
+                  x-show="multiScrape"
+                  type="button"
+                  class="btn btn-link btn-sm p-0 text-decoration-none fw-bold"
+                  @click="toggleAllTenses()"
+                  x-text="selectedTenses.length === availableTenses.length ? 'Deselect All' : 'Select All'"
+                ></button>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2">
+                <template x-for="t in availableTenses" :key="t">
+                  <button
+                    type="button"
+                    class="btn btn-sm rounded-pill py-2 px-3 fw-bold transition-all border-2"
+                    :class="selectedTenses.includes(t) ? 'btn-primary border-primary shadow' : 'btn-outline-secondary border-secondary-subtle'"
+                    @click="toggleTense(t)"
+                    x-text="t"
+                  ></button>
+                </template>
+              </div>
             </div>
           </div>
 
-          <div class="d-grid gap-2 mt-3">
-            <button type="submit" class="btn btn-primary btn-lg">
-              Scrape & Save
+          <!-- Execution Button -->
+          <div class="d-grid gap-2 mt-5 pt-3">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg shadow py-3 fw-bold"
+            >
+              <span
+                x-text="multiScrape ? 'Add Selection to Basket' : 'Scrape & Save Result'"
+              ></span>
             </button>
           </div>
         </form>
       </div>
     </div>
+
+    <!-- 2. The Basket Display (Only for Multi-Mode) -->
+    <div class="mt-5" x-show="multiScrape" x-transition>
+      <h5 class="text-muted border-bottom pb-2 fw-bold">
+        Scrape Basket (<span x-text="basket.length"></span> tasks)
+      </h5>
+
+      <!-- Placeholder -->
+      <p
+        class="text-center text-muted small mt-4 py-4 bg-white rounded shadow-sm"
+        x-show="basket.length === 0"
+      >
+        No combinations added to batch yet. Start highlighting above!
+      </p>
+
+      <!-- Task List -->
+      <div class="list-group mt-3">
+        <template x-for="(task, index) in basket" :key="index">
+          <div
+            class="list-group-item d-flex justify-content-between align-items-center shadow-sm mb-2 border-start border-primary border-4 rounded px-4"
+          >
+            <div>
+              <strong x-text="task.verb" class="text-primary fs-5"></strong>
+              <span class="text-muted mx-2">|</span>
+              <span
+                x-text="task.mode"
+                class="badge bg-light text-dark border"
+              ></span>
+              <span class="mx-1">/</span>
+              <span
+                x-text="task.tense"
+                class="small fw-bold text-secondary"
+              ></span>
+            </div>
+            <div class="btn-group">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                @click="cloneTask(index)"
+                title="Clone to form"
+              >
+                📋
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-warning"
+                @click="editTask(index)"
+                title="Edit task"
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                @click="basket.splice(index, 1)"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Execute Batch Logic -->
+      <div
+        class="card mt-4 border-success shadow-sm"
+        x-show="basket.length > 0"
+        x-transition
+      >
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-md-7 mb-3 mb-md-0">
+              <label class="small fw-bold text-success uppercase mb-1 d-block"
+                >Export Filename</label
+              >
+              <div class="input-group">
+                <input
+                  type="text"
+                  class="form-control border-success"
+                  x-model="filename"
+                  placeholder="my_verbs_export"
+                />
+                <span class="input-group-text bg-success text-white">.csv</span>
+              </div>
+            </div>
+            <div class="col-md-5 text-md-end pt-md-3">
+              <button
+                type="button"
+                class="btn btn-success btn-lg w-100 fw-bold shadow-sm"
+                @click="executeBatch()"
+              >
+                Execute Batch (<span x-text="basket.length"></span>)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<script>
-  const mapping = {
-    Indicativo: [
-      "Presente",
-      "Pretérito Imperfeito",
-      "Pretérito Perfeito",
-      "Pretérito Mais-que-perfeito",
-      "Futuro do Presente",
-      "Futuro do Pretérito",
-    ],
-    Subjuntivo: ["Presente", "Pretérito Imperfeito", "Futuro"],
-  };
-
-  function updateTenses() {
-    const modeSelect = document.getElementById("mode");
-    const tenseSelect = document.getElementById("tense");
-    const selectedMode = modeSelect.value;
-
-    // Clear current options
-    tenseSelect.innerHTML = "";
-
-    // Add new options
-    mapping[selectedMode].forEach((tense) => {
-      const opt = document.createElement("option");
-      opt.value = tense;
-      opt.innerHTML = tense;
-      tenseSelect.appendChild(opt);
-    });
+<style>
+  .transition-all {
+    transition: all 0.15s ease-in-out;
   }
+  .uppercase {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .btn-outline-secondary {
+    color: #6c757d;
+    border-color: #dee2e6;
+    background-color: white;
+  }
+  .btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #212529;
+  }
+</style>
 
-  // Initialize on load
-  window.onload = updateTenses;
+<script>
+  function scrapeComponent() {
+    return {
+      multiScrape: false,
+      basket: [],
+      verb: "",
+      filename: "verbs_batch_export",
+
+      // Changed to arrays to support Highlighter Multi-select
+      selectedModes: ["Indicativo"],
+      selectedTenses: ["Presente"],
+
+      mapping: {
+        Indicativo: [
+          "Presente",
+          "Pretérito Imperfeito",
+          "Pretérito Perfeito",
+          "Pretérito Mais-que-perfeito",
+          "Futuro do Presente",
+          "Futuro do Pretérito",
+        ],
+        Subjuntivo: ["Presente", "Pretérito Imperfeito", "Futuro"],
+      },
+
+      /**
+       * Returns unique list of tenses based on ALL selected modes.
+       */
+      get availableTenses() {
+        let tenses = new Set();
+        this.selectedModes.forEach((m) => {
+          if (this.mapping[m]) {
+            this.mapping[m].forEach((t) => tenses.add(t));
+          }
+        });
+        return Array.from(tenses);
+      },
+
+      /**
+       * Toggle Mode logic:
+       * - Single Mode: Exclusive selection (one at a time)
+       * - Multi Mode: Additive selection
+       */
+      toggleMode(m) {
+        if (!this.multiScrape) {
+          this.selectedModes = [m];
+        } else {
+          if (this.selectedModes.includes(m)) {
+            if (this.selectedModes.length > 1) {
+              this.selectedModes = this.selectedModes.filter((i) => i !== m);
+            }
+          } else {
+            this.selectedModes.push(m);
+          }
+        }
+        // Sync tenses to ensure we don't have selected tenses that don't belong to any active mode
+        this.selectedTenses = this.selectedTenses.filter((t) =>
+          this.availableTenses.includes(t),
+        );
+      },
+
+      /**
+       * Toggle Tense logic:
+       * - Single Mode: Exclusive selection
+       * - Multi Mode: Additive selection
+       */
+      toggleTense(t) {
+        if (!this.multiScrape) {
+          this.selectedTenses = [t];
+        } else {
+          if (this.selectedTenses.includes(t)) {
+            this.selectedTenses = this.selectedTenses.filter((i) => i !== t);
+          } else {
+            this.selectedTenses.push(t);
+          }
+        }
+      },
+
+      toggleAllTenses() {
+        if (this.selectedTenses.length === this.availableTenses.length) {
+          this.selectedTenses = [];
+        } else {
+          this.selectedTenses = [...this.availableTenses];
+        }
+      },
+
+      resetSelections() {
+        this.selectedModes = ["Indicativo"];
+        this.selectedTenses = ["Presente"];
+      },
+
+      addToBasket() {
+        const verbClean = this.verb.trim().toLowerCase();
+        if (!verbClean) return;
+
+        if (
+          this.selectedModes.length === 0 ||
+          this.selectedTenses.length === 0
+        ) {
+          alert("Please highlight both a Mode and at least one Tense.");
+          return;
+        }
+
+        // Logic: Cross-Join every selected Mode with every selected Tense
+        // but ONLY if that Tense exists for that Mode in our mapping
+        this.selectedModes.forEach((m) => {
+          this.selectedTenses.forEach((t) => {
+            if (this.mapping[m].includes(t)) {
+              const isDup = this.basket.some(
+                (i) => i.verb === verbClean && i.mode === m && i.tense === t,
+              );
+              if (!isDup) {
+                this.basket.push({ verb: verbClean, mode: m, tense: t });
+              }
+            }
+          });
+        });
+
+        this.verb = ""; // Clear verb to invite next entry
+      },
+
+      editTask(index) {
+        const task = this.basket[index];
+        this.verb = task.verb;
+        this.selectedModes = [task.mode];
+        this.selectedTenses = [task.tense];
+        this.basket.splice(index, 1);
+      },
+
+      cloneTask(index) {
+        const task = this.basket[index];
+        this.verb = task.verb;
+        this.selectedModes = [task.mode];
+        this.selectedTenses = [task.tense];
+      },
+
+      executeBatch() {
+        // ... (This will be implemented in Phase 2.2 with fetch API) ...
+        alert("Submitting " + this.basket.length + " tasks to the backend!");
+      },
+    };
+  }
 </script>
 {% endblock %}
