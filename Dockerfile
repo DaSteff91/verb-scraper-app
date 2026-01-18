@@ -33,4 +33,4 @@ EXPOSE $PORT
 
 # 10. Run the application using Gunicorn
 # --bind 0.0.0.0:$PORT makes the app accessible outside the container
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "2", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "1", "--threads", "4", "--worker-class", "gthread", "run:app"]

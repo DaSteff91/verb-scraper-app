@@ -5,11 +5,10 @@ Handles the transformation of 5NF database records into Anki-ready CSV strings
 using in-memory buffers for Docker compatibility.
 """
 
+import csv
 import io
 import logging
-from typing import Dict, List
-
-import pandas as pd
+from typing import List
 
 from src.models.verb import Conjugation
 
@@ -59,17 +58,14 @@ class AnkiExporter:
         formatted_conjugations: str = "\n".join(filtered_list)
         tag: str = f"{mode_name} {tense_name}"
 
-        # 3. Data assembly
-        data: Dict[str, List[str]] = {
-            "A": [verb_infinitive],
-            "B": [formatted_conjugations],
-            "C": [tag],
-        }
-
-        df: pd.DataFrame = pd.DataFrame(data)
-
-        # 4. Export to string buffer (In-memory)
+        # 3. Export to string buffer (In-memory) using standard csv module
         output: io.StringIO = io.StringIO()
-        df.to_csv(output, header=False, index=False, quoting=1)
+
+        # lineterminator='\n' matches Pandas default to_csv behavior on Linux
+        # quoting=csv.QUOTE_ALL matches Pandas quoting=1
+        writer = csv.writer(output, quoting=csv.QUOTE_ALL, lineterminator="\n")
+
+        # 4. Write the single row (Column A, B, C)
+        writer.writerow([verb_infinitive, formatted_conjugations, tag])
 
         return output.getvalue()
