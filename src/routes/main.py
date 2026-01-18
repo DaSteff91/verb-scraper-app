@@ -21,8 +21,6 @@ from flask import (
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from src.models.verb import Conjugation, Tense, Verb, Mode
-from src.services.verb_manager import VerbManager
-from src.services.exporter import AnkiExporter
 from src.services.validator import InputValidator
 
 # Define the blueprint
@@ -57,6 +55,9 @@ def index() -> Union[str, WerkzeugResponse]:
         if not InputValidator.is_valid_grammar(mode, tense):
             flash("Invalid grammatical selection detected.", "danger")
             return render_template("index.html")
+
+        # Lazy Import: This prevents 'requests' and 'bs4' from loading until a POST happens
+        from src.services.verb_manager import VerbManager
 
         # 2. Proceed with sanitized lowercase verb
         verb_infinitive: str = verb_raw.lower()
@@ -158,6 +159,9 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
                 tense=tense_name,
             )
         )
+
+    # Lazy Import of Exporter logic
+    from src.services.exporter import AnkiExporter
 
     # 3. Generate CSV content via Service
     csv_content: str = AnkiExporter.generate_verb_csv(
