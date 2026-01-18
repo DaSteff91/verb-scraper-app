@@ -2,6 +2,42 @@
 
 <!-- version list -->
 
+## v1.11.0 (2026-01-18)
+
+### Bug Fixes
+
+- **fix-ux-issues**: Xcloak added
+  ([`c52d51e`](https://github.com/DaSteff91/verb-scraper-app/commit/c52d51e609d82066d589a847739831d57d4e4ba7))
+
+### Features
+
+- **adding-a-redirect-to-a-summary-dashboard-after-bulk-craping**: Adding new functions and a new
+  route
+  ([`6ca1b90`](https://github.com/DaSteff91/verb-scraper-app/commit/6ca1b9088bc34a2e2a2cd3e258b341da584dc829))
+
+- **adding-batch-processing-into-the-apps-processing-logic): - ThreadPoolExecutor(max_workers=3**:
+  This runs up to 3 scrapes at a time. This is the "sweet spot" where you get a 3x speedup without
+  overloading the SQLite database file or getting your IP blocked by the source website.
+  ([`5edd9a2`](https://github.com/DaSteff91/verb-scraper-app/commit/5edd9a20459f275ffd3147cd6563df5561f6b94e))
+
+- **adding-the-option-as-well-to-the-single-scraping-mode-that-you-can-choose-the-filename**: Adding
+  buttons and input fields
+  ([`829966f`](https://github.com/DaSteff91/verb-scraper-app/commit/829966fe8e50eec1284f62c154c781aff13b70df))
+
+- **finalizing-the-download-page-incl-having-an-overview-as-accordien-menues**: - Refactored
+  VerbManager with ThreadPoolExecutor for concurrent scraping.
+  ([`13962bc`](https://github.com/DaSteff91/verb-scraper-app/commit/13962bc69d7fce387a56f16a3aced70e15434840))
+
+- **finalizing-the-multi-scrape-logic**: O- rchestration Logic: The batch_scrape route now actually
+  calls manager.process_batch(tasks). This means clicking "Execute Batch" now triggers the real
+  threaded scraping process.
+  ([`dfebb4f`](https://github.com/DaSteff91/verb-scraper-app/commit/dfebb4f37e5712aeb9a83b288b942fb703fb37de))
+
+- **implementing-multiselect-option-for-scraping-as-well-as-adjusting-the-ui-to-fit-the-needs**:
+  Basically adding more js via js alpine to outsource the memory usage to the users browser
+  ([`4ec096f`](https://github.com/DaSteff91/verb-scraper-app/commit/4ec096f337dec3e80ef3c1e46e9410482edb48ac))
+
+
 ## v1.10.0 (2026-01-18)
 
 ### Features
