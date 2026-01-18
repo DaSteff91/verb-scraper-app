@@ -159,10 +159,11 @@ docker compose up -d --build
 **Scraping details:**
 
 - Verb: ir
-- Mode:Indicativo
+- Mode: Indicativo
 - Tense: Presente
 
 **Result:**
+
 ![ir_conjugation_anki](/images/20260118_anki_example.png)
 
 ### Quality Standards
