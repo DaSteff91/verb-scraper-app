@@ -21,6 +21,6 @@ version_files = [
 version_declaration = ["src/__init__.py:__version__"]
 version_toml = ["pyproject.toml:tool.commitizen.version"]
 major_on_zero = false
-branch = "master"
+branch = "main"
 upload_to_pypi = false
 upload_to_release = true
