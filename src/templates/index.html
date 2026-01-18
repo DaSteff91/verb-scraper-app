@@ -233,7 +233,7 @@
                 :disabled="isProcessing"
               >
                 <!-- Show this when NOT processing -->
-                <span x-show="!isProcessing">
+                <span x-show="!isProcessing" x-cloak>
                   Execute Batch (<span x-text="basket.length"></span>)
                 </span>
 
@@ -278,6 +278,7 @@
   function scrapeComponent() {
     return {
       multiScrape: false,
+      isProcessing: false,
       basket: [],
       verb: "",
       filename: "verbs_batch_export",
