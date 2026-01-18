@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.5.2 (2026-01-18)
+
+### Bug Fixes
+
+- **fixing-again-the-versioning-sync-as-well-a-lowercase-issue-of-docker**: Fix versioning keys and
+  docker image casing
+  ([`2ac3961`](https://github.com/DaSteff91/verb-scraper-app/commit/2ac3961a38931dc90c236a5467104b95184cdcf1))
+
+
 ## v1.5.1 (2026-01-18)
 
 ### Bug Fixes
