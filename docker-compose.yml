@@ -1,0 +1,14 @@
+services:
+  verb-scraper:
+    build: .
+    container_name: verb-scraper-app
+    restart: always
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-default-insecure-key}
+      - LOG_LEVEL=INFO
+    ports:
+      - "5050:5050"
+    volumes:
+      # This is the "Recommended Approach" for SQLite
+      # It maps the local 'instance' folder to the container's folder
+      - ./instance:/app/instance

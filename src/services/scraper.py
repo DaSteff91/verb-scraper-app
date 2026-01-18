@@ -6,6 +6,7 @@ conjugations from the conjugacao.com.br website.
 """
 
 import logging
+import re
 import requests
 from bs4 import BeautifulSoup, Tag
 from typing import Dict, List, Optional
@@ -95,16 +96,18 @@ class ConjugacaoScraper:
             clean_lines: List[str] = []
             p_html = conjugation_p.encode_contents().decode("utf-8")
             # Standardize line breaks
-            parts = p_html.replace("<br/>", "<br>").split("<br>")
+            parts = re.split(r"<br\s*/?>", p_html)
 
             for part in parts:
                 temp_soup = BeautifulSoup(part, "html.parser")
-                raw_text = temp_soup.get_text().strip()
-                text = " ".join(raw_text.split())
+
+                raw_text: str = temp_soup.get_text(separator=" ").strip()
+                text: str = " ".join(raw_text.split())
+
                 if text:
                     clean_lines.append(text)
 
-            logger.info("Extracted %d lines.", len(clean_lines))
+            logger.info("Successfully extracted %d persons.", len(clean_lines))
             return clean_lines
 
         except Exception as e:
