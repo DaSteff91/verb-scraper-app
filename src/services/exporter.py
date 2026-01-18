@@ -8,7 +8,7 @@ using in-memory buffers for Docker compatibility.
 import csv
 import io
 import logging
-from typing import List
+from typing import List, Dict, Any
 
 from src.models.verb import Conjugation
 

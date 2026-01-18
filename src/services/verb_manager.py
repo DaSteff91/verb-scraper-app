@@ -64,11 +64,17 @@ class VerbManager:
             return False
 
         try:
-            # 2. Get or Create Verb
+            # 2. Get or Create Verb (with extra safety for multi-threading)
             verb = Verb.query.filter_by(infinitive=verb_infinitive).first()  # type: ignore
             if not verb:
-                verb = Verb(infinitive=verb_infinitive)
-                db.session.add(verb)
+                try:
+                    verb = Verb(infinitive=verb_infinitive)
+                    db.session.add(verb)
+                    db.session.flush()  # Try to push to DB immediately
+                except Exception:
+                    # If another thread beat us to it, rollback the flush and fetch it
+                    db.session.rollback()
+                    verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
 
             # 3. Get or Create Mode
             mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore

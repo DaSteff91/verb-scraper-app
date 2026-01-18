@@ -5,41 +5,43 @@ This module handles the UI requests for scraping verbs and displaying
 results from the database.
 """
 
-import logging
 import io
-from typing import Union, List, cast, Any
+import json
+import logging
+from typing import Any, Dict, List, Union, cast
+
 from flask import (
     Blueprint,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
-    url_for,
     send_file,
-    jsonify,
+    url_for,
 )
 from werkzeug.wrappers import Response as WerkzeugResponse
 
-from src.models.verb import Conjugation, Tense, Verb, Mode
+from src.models.verb import Conjugation, Mode, Tense, Verb
 from src.services.validator import InputValidator
 
 # Define the blueprint
 main_bp: Blueprint = Blueprint("main", __name__)
-
-# CORRECTED LINE: Use '=' for assignment, not ':'
 logger = logging.getLogger(__name__)
 
 
 @main_bp.route("/", methods=["GET", "POST"])
 def index() -> Union[str, WerkzeugResponse]:
     """
-    Handle the main dashboard and scraping form.
+    Handle the main dashboard and single-verb scraping form.
 
-    This route displays the search form on GET requests and processes
-    scraping requests on POST requests.
+    Displays the search dashboard on GET requests. On POST requests, it
+    sanitizes input, triggers the lazy-loaded scraping service for a
+    single verb, and redirects to the individual results page.
 
     Returns:
-        Union[str, Response]: The rendered HTML template or a redirect response.
+        Union[str, WerkzeugResponse]: The rendered index HTML template
+            or a redirect to the results view.
     """
     if request.method == "POST":
         # 1. Extract raw form data
@@ -50,7 +52,7 @@ def index() -> Union[str, WerkzeugResponse]:
 
         # 2. Validate Input
         if not InputValidator.is_valid_verb(verb_raw):
-            flash("Invalid verb format. Please use only letters and hyphens.", "danger")
+            flash("Invalid verb format. Use letters and hyphens.", "danger")
             return render_template("index.html")
 
         if not InputValidator.is_valid_grammar(mode, tense):
@@ -68,8 +70,6 @@ def index() -> Union[str, WerkzeugResponse]:
 
         if success:
             logger.info("Successfully processed verb: %s", verb_infinitive)
-
-            # 5. Determine filename for the redirect
             filename = (
                 custom_filename if custom_filename else f"{verb_infinitive}_export"
             )
@@ -85,7 +85,7 @@ def index() -> Union[str, WerkzeugResponse]:
             )
 
         logger.warning("Failed to process verb: %s", verb_infinitive)
-        flash(f"Could not find or scrape the verb '{verb_infinitive}'", "danger")
+        flash(f"Could not find the verb '{verb_infinitive}'", "danger")
 
     return render_template("index.html")
 
@@ -95,6 +95,9 @@ def results(verb_infinitive: str) -> str:
     """
     Display the conjugations for a specific verb.
 
+    Fetches the requested verb and its related conjugations from the
+    database based on the infinitive and query parameters.
+
     Args:
         verb_infinitive: The infinitive form of the verb to look up.
 
@@ -103,9 +106,10 @@ def results(verb_infinitive: str) -> str:
     """
     mode_name: str = request.args.get("mode", "Indicativo")
     tense_name: str = request.args.get("tense", "Presente")
+    filename: str = request.args.get("filename", f"{verb_infinitive}_export")
 
     verb: Verb = Verb.query.filter_by(infinitive=verb_infinitive).first_or_404()  # type: ignore
-    # Extract context from the first result found for display
+
     display_conjugations: List[Conjugation] = (
         Conjugation.query.join(Tense)
         .join(Mode)
@@ -116,8 +120,6 @@ def results(verb_infinitive: str) -> str:
         )
         .all()
     )  # type: ignore
-
-    filename: str = request.args.get("filename", f"{verb_infinitive}_export")
 
     return render_template(
         "results.html",
@@ -132,21 +134,23 @@ def results(verb_infinitive: str) -> str:
 @main_bp.route("/export/<verb_infinitive>")
 def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
     """
-    Generate and serve a CSV file for the requested verb.
+    Generate and serve a CSV file for a single requested verb.
+
+    Utilizes the lazy-loaded AnkiExporter to transform database records
+    into an in-memory CSV string for download.
 
     Args:
         verb_infinitive: The infinitive of the verb to be exported.
 
     Returns:
         Union[str, WerkzeugResponse]: A downloadable CSV file response
-                                      or a redirect on error.
+            or a redirect to results if data is missing.
     """
-    # 1. Extract and type query parameters
     mode_name: str = request.args.get("mode", "Indicativo")
     tense_name: str = request.args.get("tense", "Presente")
     skip_tu_vos: bool = request.args.get("skip_tu_vos") == "true"
+    custom_filename: str = request.args.get("filename", "")
 
-    # 2. Fetch Verb and specific Conjugations
     verb: Verb = Verb.query.filter_by(infinitive=verb_infinitive).first_or_404()  # type: ignore
 
     conjugations: List[Conjugation] = (
@@ -161,8 +165,7 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
     )  # type: ignore
 
     if not conjugations:
-        logger.warning("Export requested for %s with no DB data.", verb_infinitive)
-        flash("No data available to export. Please scrape first.", "warning")
+        flash("No data available to export.", "warning")
         return redirect(
             url_for(
                 "main.results",
@@ -172,31 +175,28 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
             )
         )
 
-    custom_filename: str = request.args.get("filename", "")
-
-    # Lazy Import of Exporter logic
     from src.services.exporter import AnkiExporter
 
-    # 3. Generate CSV content via Service
     csv_content: str = AnkiExporter.generate_verb_csv(
         conjugations, verb_infinitive, mode_name, tense_name, skip_tu_vos
     )
 
-    # 4. Prepare in-memory binary stream for Flask
     mem_file: io.BytesIO = io.BytesIO()
     mem_file.write(csv_content.encode("utf-8-sig"))
     mem_file.seek(0)
 
-    # Generate sanitized filename
-    if custom_filename:
-        filename = f"{custom_filename}.csv"
-    else:
-        filename = f"{verb_infinitive}_{mode_name}_{tense_name}.csv"
-
+    filename = (
+        f"{custom_filename}.csv"
+        if custom_filename
+        else f"{verb_infinitive}_{mode_name}_{tense_name}.csv"
+    )
     filename = filename.lower().replace(" ", "_")
 
     return send_file(
-        mem_file, mimetype="text/csv", as_attachment=True, download_name=filename
+        mem_file,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
     )
 
 
@@ -205,39 +205,47 @@ def batch_scrape() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     """
     Handle the JSON payload for multi-scraping tasks.
 
-    This endpoint receives a list of verbs and grammatical combinations from
-    the frontend "basket". It validates the integrity of the entire batch
-    before triggering the background scraping process.
+    Receives a list of tasks from the frontend basket, validates the
+    entire set, and triggers the threaded parallel orchestrator.
 
     Returns:
-        WerkzeugResponse: A JSON response containing a success status and
-            redirect URL, or a 400 error if validation fails.
+        Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]: A JSON
+            response containing the success status and redirect URL.
     """
-    # Cast the JSON payload to a dictionary so Pylance understands 'get'
-    raw_data: Any = request.get_json()
-    data = cast(dict[str, Any], raw_data)
+    json_data: Any = request.get_json()
+    if not isinstance(json_data, dict):
+        return jsonify({"error": "Invalid JSON format"}), 400
 
-    if not data or "tasks" not in data:
-        return jsonify({"error": "No tasks provided"}), 400
+    tasks_raw: Any = json_data.get("tasks")
+    if not isinstance(tasks_raw, list):
+        return jsonify({"error": "No tasks list provided"}), 400
 
-    # Explicitly type the extracted variables
-    tasks = cast(list[dict[str, str]], data.get("tasks", []))
-    filename = cast(str, data.get("filename", "batch_export"))
+    tasks: List[Dict[str, str]] = cast(List[Dict[str, str]], tasks_raw)
+    filename: str = str(json_data.get("filename", "batch_export"))
 
-    # Lazy import remains inside for memory optimization
+    # Validate batch data integrity
     from src.services.validator import InputValidator
 
     if not InputValidator.validate_batch(tasks):
-        logger.warning("Batch validation failed for input: %s", data)
-        return jsonify({"error": "One or more tasks contain invalid data"}), 400
+        logger.warning("Batch validation failed for: %s", tasks)
+        return jsonify({"error": "Batch contains invalid data"}), 400
 
-    logger.info(
-        "Batch request accepted: %d tasks for filename: %s", len(tasks), filename
-    )
+    logger.info("Batch accepted: %d tasks. Orchestrating...", len(tasks))
 
-    # Note: Phase 3 will implement the Scraper Service orchestration here.
+    # Trigger Parallel Execution
+    from src.services.verb_manager import VerbManager
 
-    # Redirect to index temporarily until the unified results page is ready
+    manager: VerbManager = VerbManager()
+    summary: Dict[str, int] = manager.process_batch(tasks)
+
+    success_count = summary.get("success", 0)
+    failed_count = summary.get("failed", 0)
+
+    if success_count > 0:
+        flash(f"Successfully scraped {success_count} combinations.", "success")
+    if failed_count > 0:
+        flash(f"Failed to scrape {failed_count} tasks.", "warning")
+
     return jsonify(
         {
             "status": "success",
@@ -248,12 +256,17 @@ def batch_scrape() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     )
 
 
-# 2. Add the New Route
 @main_bp.route("/results-batch")
 def results_batch() -> str:
-    """Displays a summary of multiple scraped verbs."""
-    import json
+    """
+    Display a grouped summary of multiple scraped verbs.
 
+    Iterates through the batch tasks to prepare a structured dataset
+    for the accordion-style results dashboard.
+
+    Returns:
+        str: The rendered batch results HTML template.
+    """
     tasks_raw = request.args.get("tasks", "[]")
     filename = request.args.get("filename", "batch_export")
     tasks = json.loads(tasks_raw)
@@ -288,6 +301,66 @@ def results_batch() -> str:
         "results_batch.html",
         batch=batch_display,
         filename=filename,
-        # We pass tasks back so the "Download" button knows what to include
         tasks_json=tasks_raw,
+    )
+
+
+@main_bp.route("/export-batch")
+def export_batch_csv() -> Union[WerkzeugResponse, Any]:
+    """
+    Generate and serve a single unified CSV containing multiple verbs.
+
+    Aggregates database records for all verbs in the requested batch
+    and provides a single, Anki-optimized CSV download.
+
+    Returns:
+        Union[WerkzeugResponse, Any]: A downloadable CSV file response
+            containing the aggregated batch data.
+    """
+    tasks_raw = request.args.get("tasks", "[]")
+    custom_filename = request.args.get("filename", "batch_export")
+    skip_tu_vos = request.args.get("skip_tu_vos") == "true"
+
+    tasks = json.loads(tasks_raw)
+    batch_data = []
+
+    for t in tasks:
+        verb = Verb.query.filter_by(infinitive=t["verb"]).first()
+        if not verb:
+            continue
+
+        conjs = (
+            Conjugation.query.join(Tense)
+            .join(Mode)
+            .filter(
+                Conjugation.verb_id == verb.id,
+                Tense.name == t["tense"],
+                Mode.name == t["mode"],
+            )
+            .all()
+        )
+
+        batch_data.append(
+            {
+                "verb": verb.infinitive,
+                "mode": t["mode"],
+                "tense": t["tense"],
+                "conjugations": conjs,
+            }
+        )
+
+    from src.services.exporter import AnkiExporter
+
+    csv_content = AnkiExporter.generate_batch_csv(batch_data, skip_tu_vos)
+
+    mem_file = io.BytesIO()
+    mem_file.write(csv_content.encode("utf-8-sig"))
+    mem_file.seek(0)
+
+    filename = f"{custom_filename}.csv".lower().replace(" ", "_")
+    return send_file(
+        mem_file,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
     )
