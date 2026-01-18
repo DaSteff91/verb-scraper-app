@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.10.0 (2026-01-18)
+
+### Features
+
+- **implementing-lazy-loading-of-bs-and-the-exporter**: Replacing the place where the libraries are
+  called to be imported from
+  ([`2c64a4f`](https://github.com/DaSteff91/verb-scraper-app/commit/2c64a4f0fb895c5256cf1771aa8426e85cd5af4c))
+
+
 ## v1.9.0 (2026-01-18)
 
 ### Features
