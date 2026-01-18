@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-01-18)
+
+### Features
+
+- **preparing-the-app-for-dockerization**: Making it ghcr ready
+  ([`545c505`](https://github.com/DaSteff91/verb-scraper-app/commit/545c5056e427448f7a48eebf726c8208d3b6826f))
+
+
 ## v1.4.1 (2026-01-18)
 
 ### Bug Fixes
