@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-01-18)
+
+### Features
+
+-
+  **instead-of-4-making-all-6-conjugations-available,-gettting-the-UI-dynamic-and-focusing-scraping-only-on-subjuntivo-and-indicativo**:
+  Implemented parent scoping in the scraper to get better h element scraping results plus adding
+  some js into the html files
+  ([`2344616`](https://github.com/DaSteff91/verb-scraper-app/commit/234461653eb38196cc6f72a0cc9547cb46d67dc8))
+
+
 ## v1.3.0 (2026-01-17)
 
 ### Bug Fixes
