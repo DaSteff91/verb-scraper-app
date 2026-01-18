@@ -7,7 +7,7 @@ conjugations from the conjugacao.com.br website.
 
 import logging
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from typing import Dict, List, Optional
 
 # Setup logger for this service
@@ -51,61 +51,61 @@ class ConjugacaoScraper:
 
         soup = BeautifulSoup(response.text, "html.parser")
 
+        # DEBUG: List all headers to see what we are working with
+        all_modes = [h3.get_text(strip=True) for h3 in soup.find_all("h3")]
+        logger.debug("Available Modes (h3) on page: %s", all_modes)
+
         try:
-            # 1. Find the Mode (h3)
-            mode_header = soup.find("h3", string=mode)
-            if not mode_header:
-                logger.warning("Mode '%s' not found for verb '%s'", mode, verb)
+            # 1. Find the Mode Header (h3)
+            # We look for all h3 tags and match the text
+            mode_headers = [
+                h3 for h3 in soup.find_all("h3") if h3.get_text(strip=True) == mode
+            ]
+
+            if not mode_headers:
+                logger.warning("Mode '%s' NOT FOUND", mode)
                 return None
 
-            mode_section = mode_header.parent
+            conjugation_p: Optional[Tag] = None
 
-            # 2. Find the Tense (h4) inside that mode
-            tense_header = mode_section.find("h4", string=tense)
-            if not tense_header:
-                logger.warning("Tense '%s' not found in mode '%s'", tense, mode)
-                return None
+            # 2. Scope Search (Your Original Logic)
+            # We look inside the PARENT of each mode_header for the correct tense
+            for m_header in mode_headers:
+                container = m_header.parent
+                if not container or not isinstance(container, Tag):
+                    continue
 
-            tense_section = tense_header.parent
+                # Search for the tense (h4) ONLY inside this container
+                tense_header = container.find("h4", string=tense)
+                if tense_header and isinstance(tense_header, Tag):
+                    logger.info("Found '%s' inside '%s' container", tense, mode)
 
-            # 3. Get the paragraph containing the spans
-            conjugation_p = tense_section.find("p")
+                    # Grab the paragraph following the tense header
+                    # In this site, it's often a sibling of h4 OR inside the h4's parent
+                    # To be safe, we look for the next <p> after the h4
+                    conjugation_p = tense_header.find_next_sibling("p")
+                    if conjugation_p:
+                        break
+
             if not conjugation_p:
+                logger.warning("Could not find data for %s %s", mode, tense)
                 return None
 
-            # 4. Extract text carefully
-            # The site often uses: <p><span>eu</span> <span>vou</span><br>...</p>
-            # We want to keep "eu vou" as one string.
-
+            # 3. Clean the contents (keeping Pronoun + Verb together)
             clean_lines: List[str] = []
-
-            # We iterate through each 'line' which is usually separated by <br> tags
-            # but in BS4 it's easier to look at the strings within the p tag.
-
-            # We'll use a more surgical approach:
-            p_text = conjugation_p.encode_contents().decode("utf-8")
-            # Split by <br> or <br/> to get each person's line
-            parts = p_text.replace("<br/>", "<br>").split("<br>")
+            p_html = conjugation_p.encode_contents().decode("utf-8")
+            # Standardize line breaks
+            parts = p_html.replace("<br/>", "<br>").split("<br>")
 
             for part in parts:
-                # Strip any remaining HTML tags from the part (like the spans)
                 temp_soup = BeautifulSoup(part, "html.parser")
                 text = temp_soup.get_text(separator=" ").strip()
                 if text:
                     clean_lines.append(text)
 
-            # 5. Apply your custom logic (Removing tu and vós)
-            # Now clean_lines looks like: ["eu vou", "tu vais", "ele vai", ...]
-            if len(clean_lines) >= 6:
-                return [
-                    clean_lines[0],  # eu vou
-                    clean_lines[2],  # ele vai
-                    clean_lines[3],  # nós vamos
-                    clean_lines[5],  # eles vão
-                ]
-
+            logger.info("Extracted %d lines.", len(clean_lines))
             return clean_lines
 
         except Exception as e:
-            logger.error("Error parsing HTML for %s: %s", verb, e)
+            logger.error("Scraping error for %s: %s", verb, e)
             return None

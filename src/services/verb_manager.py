@@ -2,7 +2,7 @@
 Verb Manager Service.
 
 This module orchestrates the scraping and persistence of verb data
-into the database.
+into the database using a 5th Normal Form approach.
 """
 
 import logging
@@ -21,9 +21,16 @@ class VerbManager:
     """
 
     def __init__(self) -> None:
-        self.scraper = ConjugacaoScraper()
-        # The persons we keep based on your requirement (excluding tu/vós)
-        self.person_names = ["eu", "ele/ela", "nós", "eles/elas"]
+        """Initialize the service with its scraper and person mappings."""
+        self.scraper: ConjugacaoScraper = ConjugacaoScraper()
+        self.person_names: List[str] = [
+            "eu",
+            "tu",
+            "ele/ela/você",
+            "nós",
+            "vós",
+            "eles/elas/vocês",
+        ]
 
     def get_or_create_verb_data(
         self, verb_infinitive: str, mode_name: str, tense_name: str
@@ -31,11 +38,18 @@ class VerbManager:
         """
         Coordinates scraping a verb and saving it to the 5NF database.
 
+        Args:
+            verb_infinitive: The infinitive form of the verb.
+            mode_name: The grammatical mode to scrape.
+            tense_name: The grammatical tense to scrape.
+
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if persistence was successful, False otherwise.
         """
-        # 1. Scrape the data
-        forms = self.scraper.get_conjugations(verb_infinitive, mode_name, tense_name)
+        # 1. Scrape the raw data
+        forms: Optional[List[str]] = self.scraper.get_conjugations(
+            verb_infinitive, mode_name, tense_name
+        )
 
         if not forms:
             logger.error(
@@ -45,37 +59,50 @@ class VerbManager:
 
         try:
             # 2. Get or Create Verb
-            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
+            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()  # type: ignore
             if not verb:
                 verb = Verb(infinitive=verb_infinitive)
                 db.session.add(verb)
 
             # 3. Get or Create Mode
-            mode = Mode.query.filter_by(name=mode_name).first()
+            mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore
             if not mode:
                 mode = Mode(name=mode_name)
                 db.session.add(mode)
 
             # 4. Get or Create Tense (linked to Mode)
-            tense = Tense.query.filter_by(name=tense_name, mode=mode).first()
+            tense = Tense.query.filter_by(name=tense_name, mode=mode).first()  # type: ignore
             if not tense:
                 tense = Tense(name=tense_name, mode=mode)
                 db.session.add(tense)
 
-            # 5. Process the 4 forms and map to Persons
-            db.session.flush()  # Ensures IDs are generated for verb/tense
+            # Ensure IDs are generated before proceeding to children
+            db.session.flush()
 
+            # 5. Determine if we need an offset (e.g., Imperativo starts at 'tu')
+            offset: int = 0
+            if len(forms) == 5 and mode_name == "Imperativo":
+                offset = 1
+
+            # 6. Process and map forms to Persons
             for i, form_value in enumerate(forms):
+                p_index: int = i + offset
+
+                # Safety break if scraper returns more than 6 persons
+                if p_index >= len(self.person_names):
+                    break
+
+                p_name: str = self.person_names[p_index]
+
                 # Get or Create Person
-                p_name = self.person_names[i]
-                person = Person.query.filter_by(name=p_name).first()
+                person = Person.query.filter_by(name=p_name).first()  # type: ignore
                 if not person:
-                    person = Person(name=p_name, sort_order=i)
+                    person = Person(name=p_name, sort_order=p_index)
                     db.session.add(person)
                     db.session.flush()
 
-                # Check if this specific conjugation already exists to avoid duplicates
-                exists = Conjugation.query.filter_by(
+                # Avoid duplicates: check if this specific conjugation exists
+                exists = Conjugation.query.filter_by(  # type: ignore
                     verb=verb, tense=tense, person=person
                 ).first()
 

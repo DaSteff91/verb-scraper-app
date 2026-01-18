@@ -23,7 +23,6 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.config.from_object(config_class)
 
     # 1. Cast types to satisfy Pylance "UnknownMemberType"
-    # We use app.config directly and cast the results
     log_level = cast(int, app.config["LOG_LEVEL"])
     log_format = cast(str, app.config["LOG_FORMAT"])
 
@@ -54,5 +53,4 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     def inject_version() -> dict[str, str]:
         return dict(version=__version__)
 
-    # Return the app - Pylance should see this as type 'Flask'
     return app

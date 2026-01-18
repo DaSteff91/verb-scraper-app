@@ -8,6 +8,9 @@ used to initialize the Flask app context.
 import os
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Config:
@@ -16,12 +19,14 @@ class Config:
     """
 
     # Security
-    SECRET_KEY: str = os.environ.get("SECRET_KEY") or "dev-key-please-change"
+    _secret = os.environ.get("SECRET_KEY")
+
+    if not _secret:
+        raise ValueError("No SECRET_KEY set for the application.")
+
+    SECRET_KEY: str = _secret
 
     # Database - Absolute Path Logic
-    # 1. Get the directory where config.py lives
-    # 2. Go up one level to the project root
-    # 3. Target the instance folder
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     INSTANCE_PATH: Path = BASE_DIR / "instance"
 
