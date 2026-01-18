@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.3 (2026-01-18)
+
+### Bug Fixes
+
+- **fix-directory-missmatch**: Fix directory missmatch
+  ([`53eb9d4`](https://github.com/DaSteff91/verb-scraper-app/commit/53eb9d4bda24f1eede05f91f783077f4e01417fb))
+
+
 ## v1.5.2 (2026-01-18)
 
 ### Bug Fixes
