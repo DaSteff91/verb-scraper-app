@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.4 (2026-01-18)
+
+### Bug Fixes
+
+- **adding-a-license-and-readme.md-file**: No code changes
+  ([`82367a3`](https://github.com/DaSteff91/verb-scraper-app/commit/82367a3fdf0180e2723be9fe06f6d328d4f0f12e))
+
+
 ## v1.5.3 (2026-01-18)
 
 ### Bug Fixes
