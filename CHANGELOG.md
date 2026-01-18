@@ -2,6 +2,26 @@
 
 <!-- version list -->
 
+## v1.8.0 (2026-01-18)
+
+### Bug Fixes
+
+- **add-dummy-key**: Provide dummy secret key for CI runner
+  ([`22d1a33`](https://github.com/DaSteff91/verb-scraper-app/commit/22d1a33d2cff1aba6846737fc6b0bab240a37d19))
+
+- **add-dummy-key**: Provide dummy secret key for CI runner
+  ([`6c92997`](https://github.com/DaSteff91/verb-scraper-app/commit/6c92997fa886767255686ee2bb7a71707de9b090))
+
+### Features
+
+- **adding-user-input-sanitation**: Implementing a regex to check the user input fits the expected
+  format
+  ([`d2c29bf`](https://github.com/DaSteff91/verb-scraper-app/commit/d2c29bf2783e1ef07dd7628f7f3456e8e6af64c4))
+
+- **implement-strict-input-validation-and-normalization**: Implement a regex based approach
+  ([`c945bdd`](https://github.com/DaSteff91/verb-scraper-app/commit/c945bdd6baf1279ff939ffa8c60e2203910df167))
+
+
 ## v1.7.1 (2026-01-18)
 
 ### Bug Fixes
