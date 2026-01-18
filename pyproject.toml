@@ -24,3 +24,9 @@ major_on_zero = false
 branch = "main"
 upload_to_pypi = false
 upload_to_release = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Default arguments: generate a coverage report and show local variables on failure
+addopts = "--cov=src --cov-report=term-missing -vv"
