@@ -30,3 +30,6 @@ testpaths = ["tests"]
 pythonpath = ["."]
 # Default arguments: generate a coverage report and show local variables on failure
 addopts = "--cov=src --cov-report=term-missing -vv"
+markers = [
+    "online: tests that require real internet access (contract tests)",
+]

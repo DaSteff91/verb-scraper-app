@@ -6,6 +6,28 @@ on:
       - main
 
 jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-flask pytest-cov requests-mock
+
+      - name: Run Pytest
+        # We run all tests, including the 'online' contract tests
+        run: pytest
+        # SETTING: Change this to 'false' to block the build if tests fail
+        continue-on-error: true
   versioning:
     name: Running Python Semantic Release
     permissions:
