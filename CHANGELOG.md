@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.6 (2026-01-18)
+
+### Bug Fixes
+
+- **formating-in-md**: Formating the image implementation of the example
+  ([`50e49a5`](https://github.com/DaSteff91/verb-scraper-app/commit/50e49a57cc21fe79d64a80c177f3c8f24013d0b1))
+
+
 ## v1.5.5 (2026-01-18)
 
 ### Bug Fixes
