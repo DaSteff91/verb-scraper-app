@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.1 (2026-01-18)
+
+### Bug Fixes
+
+- **adding-badges-to-the-readme**: Changes in the markdown
+  ([`6ddbc0d`](https://github.com/DaSteff91/verb-scraper-app/commit/6ddbc0deb3f574dbeb3a917cca4e290cf79946cd))
+
+
 ## v1.7.0 (2026-01-18)
 
 ### Bug Fixes
