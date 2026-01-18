@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-01-18)
+
+### Features
+
+- **accidently-arlready-started-preparing-for-test-suite-implementation-on-main**: Next - move to
+  feature branch for this
+  ([`3915b4d`](https://github.com/DaSteff91/verb-scraper-app/commit/3915b4de0f07ddec78f935242d5aab01fa0a0103))
+
+
 ## v1.5.6 (2026-01-18)
 
 ### Bug Fixes
