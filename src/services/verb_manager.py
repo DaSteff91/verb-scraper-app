@@ -2,11 +2,17 @@
 Verb Manager Service.
 
 This module orchestrates the scraping and persistence of verb data
-into the database using a 5th Normal Form approach.
+into the database using a 5th Normal Form approach, supporting both
+single-task and concurrent batch processing.
 """
 
 import logging
-from typing import List, Optional
+import random
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Optional
+
+from flask import Flask, current_app
 
 from src.extensions import db
 from src.models.verb import Conjugation, Mode, Person, Tense, Verb
@@ -76,32 +82,25 @@ class VerbManager:
                 tense = Tense(name=tense_name, mode=mode)
                 db.session.add(tense)
 
-            # Ensure IDs are generated before proceeding to children
             db.session.flush()
 
-            # 5. Determine if we need an offset (e.g., Imperativo starts at 'tu')
+            # 5. Handle person mapping and offsets
             offset: int = 0
             if len(forms) == 5 and mode_name == "Imperativo":
                 offset = 1
 
-            # 6. Process and map forms to Persons
             for i, form_value in enumerate(forms):
                 p_index: int = i + offset
-
-                # Safety break if scraper returns more than 6 persons
                 if p_index >= len(self.person_names):
                     break
 
                 p_name: str = self.person_names[p_index]
-
-                # Get or Create Person
                 person = Person.query.filter_by(name=p_name).first()  # type: ignore
                 if not person:
                     person = Person(name=p_name, sort_order=p_index)
                     db.session.add(person)
                     db.session.flush()
 
-                # Avoid duplicates: check if this specific conjugation exists
                 exists = Conjugation.query.filter_by(  # type: ignore
                     verb=verb, tense=tense, person=person
                 ).first()
@@ -113,15 +112,50 @@ class VerbManager:
                     db.session.add(conj)
 
             db.session.commit()
-            logger.info(
-                "Successfully persisted %s (%s %s)",
-                verb_infinitive,
-                mode_name,
-                tense_name,
-            )
             return True
 
         except Exception as e:
             db.session.rollback()
             logger.error("Database error while saving %s: %s", verb_infinitive, e)
             return False
+
+    def process_batch(self, tasks: List[Dict[str, str]]) -> Dict[str, int]:
+        """
+        Orchestrates a batch of scraping tasks using a thread pool.
+
+        Args:
+            tasks: A list of dictionaries containing 'verb', 'mode', and 'tense'.
+
+        Returns:
+            Dict[str, int]: A summary of the batch execution (total, success, failed).
+        """
+        results = {"total": len(tasks), "success": 0, "failed": 0}
+
+        # We grab the actual app object to pass to threads
+        app_instance = current_app._get_current_object()  # type: ignore
+
+        def threaded_task(task: Dict[str, str]) -> bool:
+            """Internal worker to handle a single scrape within an app context."""
+            # Give the website some breathing room (Good Citizen Jitter)
+            time.sleep(random.uniform(0.3, 1.0))
+
+            with app_instance.app_context():
+                return self.get_or_create_verb_data(
+                    task["verb"], task["mode"], task["tense"]
+                )
+
+        logger.info("Starting batch process for %d tasks...", len(tasks))
+
+        # We use max_workers=3 to keep it fast but respectful to the source site
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            outcomes = list(executor.map(threaded_task, tasks))
+
+        results["success"] = outcomes.count(True)
+        results["failed"] = outcomes.count(False)
+
+        logger.info(
+            "Batch finished. Success: %d, Failed: %d",
+            results["success"],
+            results["failed"],
+        )
+        return results
