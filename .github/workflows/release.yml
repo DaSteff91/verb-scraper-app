@@ -100,29 +100,35 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_PRIVATE_SSH_KEY }}
           script: |
-            # Configuration
+            # 1. Capture the raw image name
+            RAW_IMAGE="ghcr.io/${{ github.repository }}"
+            IMAGE_TAG="${{ needs.versioning.outputs.new_version }}"
+            
+            # 2. Convert image name to lowercase using 'tr'
+            IMAGE_NAME=$(echo "$RAW_IMAGE" | tr '[:upper:]' '[:lower:]')
+            FULL_IMAGE_PATH="$IMAGE_NAME:$IMAGE_TAG"
+            
             CONTAINER_NAME="verb-scraper-app"
             PORT_HOST=5050
-            IMAGE_TAG="${{ needs.versioning.outputs.new_version }}"
-            IMAGE_NAME="ghcr.io/${{ github.repository }}:$IMAGE_TAG"
             
-            # Navigate to your deployment folder (create if doesn't exist)
             mkdir -p ~/deployments/verb-scraper
             cd ~/deployments/verb-scraper
 
             echo "Deploying version: $IMAGE_TAG"
+            echo "Clean Image Path: $FULL_IMAGE_PATH"
+
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            docker pull $IMAGE_NAME
+            # Use the lowercase variables here
+            docker pull $FULL_IMAGE_PATH
 
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
-            # Critical: Added volume mapping for SQLite persistence
             docker run -d \
               --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               -p $PORT_HOST:5050 \
               -v $(pwd)/instance:/app/instance \
               --env-file $(pwd)/.env \
-              $IMAGE_NAME
+              $FULL_IMAGE_PATH
