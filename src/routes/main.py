@@ -6,13 +6,23 @@ results from the database.
 """
 
 import logging
+import io
 from typing import Union, List
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+    send_file,
+)
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from src.models.verb import Conjugation, Tense, Verb, Mode
 from src.services.verb_manager import VerbManager
+from src.services.exporter import AnkiExporter
 
 # Define the blueprint
 main_bp: Blueprint = Blueprint("main", __name__)
@@ -94,4 +104,67 @@ def results(verb_infinitive: str) -> str:
         conjugations=display_conjugations,
         mode=mode_name,
         tense=tense_name,
+    )
+
+
+@main_bp.route("/export/<verb_infinitive>")
+def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
+    """
+    Generate and serve a CSV file for the requested verb.
+
+    Args:
+        verb_infinitive: The infinitive of the verb to be exported.
+
+    Returns:
+        Union[str, WerkzeugResponse]: A downloadable CSV file response
+                                      or a redirect on error.
+    """
+    # 1. Extract and type query parameters
+    mode_name: str = request.args.get("mode", "Indicativo")
+    tense_name: str = request.args.get("tense", "Presente")
+    skip_tu_vos: bool = request.args.get("skip_tu_vos") == "true"
+
+    # 2. Fetch Verb and specific Conjugations
+    verb: Verb = Verb.query.filter_by(infinitive=verb_infinitive).first_or_404()  # type: ignore
+
+    conjugations: List[Conjugation] = (
+        Conjugation.query.join(Tense)
+        .join(Mode)
+        .filter(
+            Conjugation.verb_id == verb.id,
+            Tense.name == tense_name,
+            Mode.name == mode_name,
+        )
+        .all()
+    )  # type: ignore
+
+    if not conjugations:
+        logger.warning("Export requested for %s with no DB data.", verb_infinitive)
+        flash("No data available to export. Please scrape first.", "warning")
+        return redirect(
+            url_for(
+                "main.results",
+                verb_infinitive=verb_infinitive,
+                mode=mode_name,
+                tense=tense_name,
+            )
+        )
+
+    # 3. Generate CSV content via Service
+    csv_content: str = AnkiExporter.generate_verb_csv(
+        conjugations, verb_infinitive, mode_name, tense_name, skip_tu_vos
+    )
+
+    # 4. Prepare in-memory binary stream for Flask
+    mem_file: io.BytesIO = io.BytesIO()
+    mem_file.write(csv_content.encode("utf-8"))
+    mem_file.seek(0)
+
+    # Generate sanitized filename
+    filename: str = f"{verb_infinitive}_{mode_name}_{tense_name}.csv".lower().replace(
+        " ", "_"
+    )
+
+    return send_file(
+        mem_file, mimetype="text/csv", as_attachment=True, download_name=filename
     )

@@ -7,7 +7,7 @@ using in-memory buffers for Docker compatibility.
 
 import io
 import logging
-from typing import List
+from typing import Dict, List
 
 import pandas as pd
 
@@ -35,39 +35,41 @@ class AnkiExporter:
             verb_infinitive: The infinitive of the verb.
             mode_name: Name of the grammatical mode.
             tense_name: Name of the grammatical tense.
-            skip_tu_vos: If True, filters out 2nd person sing/plural.
+            skip_tu_vos: If True, filters out 2nd person sing/plural (tu/vós).
 
         Returns:
-            str: The CSV content as a string.
+            str: The CSV content as a formatted string.
         """
         logger.info(
-            "Generating CSV for %s (%s %s)", verb_infinitive, mode_name, tense_name
+            "Generating CSV for %s (%s %s). Filter tu/vós: %s",
+            verb_infinitive,
+            mode_name,
+            tense_name,
+            skip_tu_vos,
         )
 
         # 1. Filter logic
-        filtered_list: List[str] = []
-        for conj in conjugations:
-            if skip_tu_vos and conj.person.name in ["tu", "vós"]:
-                continue
-            filtered_list.append(conj.value)
+        filtered_list: List[str] = [
+            conj.value
+            for conj in conjugations
+            if not (skip_tu_vos and conj.person.name in ["tu", "vós"])
+        ]
 
-        # 2. Replicate your original format logic
-        # Column B: Conjugations joined by newline
+        # 2. Replicate original format logic
         formatted_conjugations: str = "\n".join(filtered_list)
-
-        # Column C: Tags
         tag: str = f"{mode_name} {tense_name}"
 
-        # 3. Use Pandas for clean CSV generation
-        data = {"A": [verb_infinitive], "B": [formatted_conjugations], "C": [tag]}
+        # 3. Data assembly
+        data: Dict[str, List[str]] = {
+            "A": [verb_infinitive],
+            "B": [formatted_conjugations],
+            "C": [tag],
+        }
 
-        df = pd.DataFrame(data)
+        df: pd.DataFrame = pd.DataFrame(data)
 
         # 4. Export to string buffer (In-memory)
-        # We use no header and no index to match your original Anki import style
-        output = io.StringIO()
-        df.to_csv(
-            output, header=False, index=False, quoting=1
-        )  # quoting=1 ensures strings are quoted if they contain newlines
+        output: io.StringIO = io.StringIO()
+        df.to_csv(output, header=False, index=False, quoting=1)
 
         return output.getvalue()
