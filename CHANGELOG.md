@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v1.7.0 (2026-01-18)
+
+### Bug Fixes
+
+- **finalizing-the-test-for-the-scraper**: Adding more simple test cases
+  ([`1af40e1`](https://github.com/DaSteff91/verb-scraper-app/commit/1af40e1c917a872e3125766c76b91957fa486205))
+
+- **fixing-tests**: Failure A: test_export_csv_route_no_data
+  ([`e9a0d46`](https://github.com/DaSteff91/verb-scraper-app/commit/e9a0d4694c5715ab1e62846d47877f3373448f8a))
+
+### Features
+
+- **adding-tests-for-the-database-handling-and-the-model-layer**: One small change in the verb model
+  due to deprication warning in the test
+  ([`72f704b`](https://github.com/DaSteff91/verb-scraper-app/commit/72f704becd7cf2f8dcd6020104f47689e3e65f6a))
+
+- **adding-the-first-unittest**: Providing a unittest for the scraper vs an offline sample
+  ([`91557df`](https://github.com/DaSteff91/verb-scraper-app/commit/91557dfa97945511aff4831e8ca7f5355ca6b813))
+
+- **finalizing-the-test-exporter-tests**: Adding some new tests and fixing a bug in the verb file
+  ([`20c21af`](https://github.com/DaSteff91/verb-scraper-app/commit/20c21af8c04681ebf652dfda84c1d24f88533c9c))
+
+- **finalizing-the-testsuite**: Adding new tests to ensure the scraped format matches the expected
+  format of the app
+  ([`e1397fd`](https://github.com/DaSteff91/verb-scraper-app/commit/e1397fd50d153376489b6f5ff37e17eb49846c38))
+
+- **implementing-the-first-stuff-for-the-testing-environment-like-preparing-fixtures**: Starting
+  ([`53a1310`](https://github.com/DaSteff91/verb-scraper-app/commit/53a1310fd47c81eb3af489d596017ec6ddc484ed))
+
+
 ## v1.6.0 (2026-01-18)
 
 ### Features
