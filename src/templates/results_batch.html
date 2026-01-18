@@ -1,0 +1,60 @@
+{% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Batch Scrape Results</h2>
+      <div>
+        <button onclick="downloadBatchCSV()" class="btn btn-success fw-bold">
+          Download Combined CSV
+        </button>
+        <a href="/" class="btn btn-outline-secondary ms-2">New Scrape</a>
+      </div>
+    </div>
+
+    <div class="accordion shadow-sm" id="batchAccordion">
+      {% for item in batch %}
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button
+            class="accordion-button collapsed"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#collapse-{{ loop.index }}"
+          >
+            <strong class="text-primary">{{ item.verb }}</strong>
+            <span class="text-muted ms-2 small"
+              >({{ item.mode }} {{ item.tense }})</span
+            >
+          </button>
+        </h2>
+        <div
+          id="collapse-{{ loop.index }}"
+          class="accordion-collapse collapse"
+          data-bs-parent="#batchAccordion"
+        >
+          <div class="accordion-body">
+            <table class="table table-sm mb-0">
+              {% for conj in item.conjugations %}
+              <tr>
+                <td class="text-muted italic small" style="width: 30%">
+                  {{ conj.person.name }}
+                </td>
+                <td class="fw-bold">{{ conj.value }}</td>
+              </tr>
+              {% endfor %}
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function downloadBatchCSV() {
+    // We'll implement the bulk export route next!
+    alert("Triggering download for: {{ filename }}");
+  }
+</script>
+{% endblock %}

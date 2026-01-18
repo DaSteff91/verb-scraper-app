@@ -69,3 +69,39 @@ class AnkiExporter:
         writer.writerow([verb_infinitive, formatted_conjugations, tag])
 
         return output.getvalue()
+
+    @staticmethod
+    def generate_batch_csv(
+        batch_data: List[Dict[str, Any]], skip_tu_vos: bool = False
+    ) -> str:
+        """
+        Generates a single CSV string for a collection of verbs/tenses.
+
+        Args:
+            batch_data: A list of dicts, each containing:
+                - 'verb': Infinitive string
+                - 'conjugations': List of Conjugation objects
+                - 'mode': Mode string
+                - 'tense': Tense string
+        """
+        output = io.StringIO()
+        writer = csv.writer(output, quoting=csv.QUOTE_ALL, lineterminator="\n")
+
+        for item in batch_data:
+            verb_inf = item["verb"]
+            mode = item["mode"]
+            tense = item["tense"]
+            conjugations = item["conjugations"]
+
+            filtered_list = [
+                c.value
+                for c in conjugations
+                if not (skip_tu_vos and c.person.name in ["tu", "vós"])
+            ]
+
+            formatted_conjs = "\n".join(filtered_list)
+            tag = f"{mode} {tense}"
+
+            writer.writerow([verb_inf, formatted_conjs, tag])
+
+        return output.getvalue()
