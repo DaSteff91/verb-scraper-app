@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Verb Scraper App is a web application designed to automate the extraction, normalization, and persistence of Portuguese verb conjugations. Built with a focus on data integrity and software lifecycle management, the application provides a seamless pipeline from web scraping to SQLite persistence (5NF) and structured CSV export optimized for study tools such as [Anki(https://apps.ankiweb.net/)].
+The Verb Scraper App is a web application designed to automate the extraction, normalization, and persistence of Portuguese verb conjugations. Built with a focus on data integrity and software lifecycle management, the application provides a seamless pipeline from web scraping to SQLite persistence (5NF) and structured CSV export optimized for study tools such as [Anki](https://apps.ankiweb.net/).
 
 ## System Architecture
 
@@ -83,7 +83,7 @@ The scraping engine solves the "nested span" and "duplicate header" issues commo
 
 - **Full 6-Person Paradigm:** Supports the complete Portuguese conjugation set.
 - **Dynamic UI Logic:** JavaScript-driven dependent dropdowns ensure users only select valid mode-tense combinations.
-- **Anki Integration:** Optimized CSV generation with UTF-8-SIG encoding and a toggle to skip the 2nd person (tu/vós) according to user study preferences.
+- **Anki Integration:** Optimized CSV generation with UTF-8-SIG encoding that fits into Anki csv import.
 - **Stateless Execution:** CSV files are generated in-memory (RAM) using Byte-streams, making the application ideal for containerized environments.
 
 ## Deployment and Automation
@@ -96,15 +96,6 @@ The project features a full CI/CD pipeline via GitHub Actions:
 2.  **Containerization:** Automated builds of Python 3.13-slim images.
 3.  **GHCR:** Images are hosted on the GitHub Container Registry.
 4.  **Automatic Deployment:** Successful builds trigger an SSH action to update the production environment on Ubuntu 24.04.
-
-### Docker Production Setup
-
-The container runs as a non-privileged user and is served by Gunicorn with multi-worker concurrency.
-To deploy locally:
-
-```bash
-docker compose up -d --build
-```
 
 ## Local Development Setup
 
@@ -162,6 +153,17 @@ The application is optimized for containerized environments using a non-privileg
 ```bash
 docker compose up -d --build
 ```
+
+## Example Import in Anki
+
+**Scraping details:**
+
+- Verb: ir
+- Mode:Indicativo
+- Tense: Presente
+
+**Result:**
+![ir_conjugation_anki](/images/20260118_anki_example.png)
 
 ### Quality Standards
 
