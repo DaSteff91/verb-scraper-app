@@ -101,3 +101,28 @@ def test_results_page_404(client: FlaskClient) -> None:
     """Verify that looking for a non-existent verb returns 404."""
     response = client.get("/results/nonexistentverb")
     assert response.status_code == 404
+
+
+def test_scrape_form_validation_error_feedback(client: FlaskClient) -> None:
+    """
+    Verify that invalid input shows a red error message to the user.
+    """
+    # 1. Simulate a malicious POST request
+    response = client.post(
+        "/",
+        data={
+            "verb": "bad_verb; DROP TABLE",
+            "mode": "Indicativo",
+            "tense": "Presente",
+        },
+        follow_redirects=True,
+    )
+
+    # 2. Check that we didn't redirect to results (stayed on index)
+    assert response.status_code == 200
+
+    # 3. Check for the specific Flash Message in the HTML
+    assert b"Invalid verb format" in response.data
+
+    # 4. Verify it has the Bootstrap 'alert-danger' class (the red box)
+    assert b"alert-danger" in response.data

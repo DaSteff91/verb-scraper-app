@@ -22,7 +22,7 @@ class InputValidator:
     VERB_PATTERN: str = r"^[a-zA-Záàâãéèêíïóôõöúçñ\s-]+$"
 
     # Limits to prevent Denial of Service (DoS) attacks
-    MAX_VERB_LENGTH: int = 35
+    MAX_VERB_LENGTH: int = 20
 
     # Whitelist for Grammatical Modes and Tenses
     ALLOWED_MODES: Set[str] = {"Indicativo", "Subjuntivo", "Imperativo"}
@@ -53,10 +53,9 @@ class InputValidator:
             logger.warning("Validation Failed: Verb length/presence. Got: %s", verb)
             return False
 
+        # Regex check: ensures no symbols, numbers, or path injections
         if not re.match(cls.VERB_PATTERN, verb):
-            logger.warning(
-                "Validation Failed: Malicious characters detected in: %s", verb
-            )
+            logger.warning("Validation Failed: Invalid characters in verb: %s", verb)
             return False
 
         return True
