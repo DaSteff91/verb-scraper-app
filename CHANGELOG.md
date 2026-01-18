@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.5 (2026-01-18)
+
+### Bug Fixes
+
+- **reworking-some-md-formating,-adding-example-image-to-readme**: Nothing
+  ([`681d6df`](https://github.com/DaSteff91/verb-scraper-app/commit/681d6df8defb7396ad1dd846a143015d377d54e6))
+
+
 ## v1.5.4 (2026-01-18)
 
 ### Bug Fixes
