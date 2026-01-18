@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.9.0 (2026-01-18)
+
+### Features
+
+- **reduce-the-memory-footprint-of-the-containers-idle-consumtpion**: Replace pandas with csv
+  library as well change the workers used for the containers tasks
+  ([`84dc7d8`](https://github.com/DaSteff91/verb-scraper-app/commit/84dc7d81125f8c5140821d17a9db8c85d643a6de))
+
+
 ## v1.8.0 (2026-01-18)
 
 ### Bug Fixes
