@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.1 (2026-01-18)
+
+### Bug Fixes
+
+- Implementing containerization and push to ghcr and deploy on server
+  ([`a8d7560`](https://github.com/DaSteff91/verb-scraper-app/commit/a8d756096be82ee4dee80381ea16c1fd7b1c280d))
+
+
 ## v1.5.0 (2026-01-18)
 
 ### Features
