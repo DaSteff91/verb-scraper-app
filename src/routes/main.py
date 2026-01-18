@@ -23,6 +23,7 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 from src.models.verb import Conjugation, Tense, Verb, Mode
 from src.services.verb_manager import VerbManager
 from src.services.exporter import AnkiExporter
+from src.services.validator import InputValidator
 
 # Define the blueprint
 main_bp: Blueprint = Blueprint("main", __name__)
@@ -43,30 +44,38 @@ def index() -> Union[str, WerkzeugResponse]:
         Union[str, Response]: The rendered HTML template or a redirect response.
     """
     if request.method == "POST":
-        # Extract and sanitize form data
-        verb_infinitive: str = request.form.get("verb", "").strip().lower()
+        # Extract raw form data
+        verb_raw: str = request.form.get("verb", "").strip()
         mode: str = request.form.get("mode", "Indicativo")
         tense: str = request.form.get("tense", "Presente")
 
-        if verb_infinitive:
-            manager = VerbManager()
-            success: bool = manager.get_or_create_verb_data(
-                verb_infinitive, mode, tense
+        # 1. Validate Input before any logic happens
+        if not InputValidator.is_valid_verb(verb_raw):
+            flash("Invalid verb format. Please use only letters and hyphens.", "danger")
+            return render_template("index.html")
+
+        if not InputValidator.is_valid_grammar(mode, tense):
+            flash("Invalid grammatical selection detected.", "danger")
+            return render_template("index.html")
+
+        # 2. Proceed with sanitized lowercase verb
+        verb_infinitive: str = verb_raw.lower()
+        manager: VerbManager = VerbManager()
+        success: bool = manager.get_or_create_verb_data(verb_infinitive, mode, tense)
+
+        if success:
+            logger.info("Successfully processed verb: %s", verb_infinitive)
+            return redirect(
+                url_for(
+                    "main.results",
+                    verb_infinitive=verb_infinitive,
+                    mode=mode,
+                    tense=tense,
+                )
             )
 
-            if success:
-                logger.info("Successfully processed verb: %s", verb_infinitive)
-                return redirect(
-                    url_for(
-                        "main.results",
-                        verb_infinitive=verb_infinitive,
-                        mode=mode,
-                        tense=tense,
-                    )
-                )
-
-            logger.warning("Failed to process verb: %s", verb_infinitive)
-            flash(f"Could not find or scrape the verb '{verb_infinitive}'", "danger")
+        logger.warning("Failed to process verb: %s", verb_infinitive)
+        flash(f"Could not find or scrape the verb '{verb_infinitive}'", "danger")
 
     return render_template("index.html")
 
