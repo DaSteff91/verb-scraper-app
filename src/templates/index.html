@@ -29,6 +29,10 @@
           id="scrapeForm"
           x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
         >
+          <!-- These hidden inputs ensure Single Mode still works with your Highlighter Pills -->
+          <input type="hidden" name="verb" :value="verb" />
+          <input type="hidden" name="mode" :value="selectedModes[0]" />
+          <input type="hidden" name="tense" :value="selectedTenses[0]" />
           <!-- Verb Input Section -->
           <div class="mb-5">
             <label class="form-label fw-bold text-muted small uppercase"
@@ -101,6 +105,26 @@
               </div>
             </div>
           </div>
+
+          <!-- Filename for Single-Scrape Mode -->
+          <div class="mt-4 pt-3 border-top" x-show="!multiScrape" x-transition>
+            <label class="form-label fw-bold text-muted small uppercase"
+              >Custom Export Filename</label
+            >
+            <div class="input-group input-group-sm">
+              <input
+                type="text"
+                class="form-control border-2"
+                name="filename"
+                x-model="filename"
+                placeholder="e.g., ir_presente"
+              />
+              <span class="input-group-text bg-light border-2">.csv</span>
+            </div>
+          </div>
+
+          <!-- Add this hidden input to ensure the filename is sent during the standard POST -->
+          <input type="hidden" name="filename" :value="filename" />
 
           <!-- Execution Button -->
           <div class="d-grid gap-2 mt-5 pt-3">
@@ -206,8 +230,21 @@
                 type="button"
                 class="btn btn-success btn-lg w-100 fw-bold shadow-sm"
                 @click="executeBatch()"
+                :disabled="isProcessing"
               >
-                Execute Batch (<span x-text="basket.length"></span>)
+                <!-- Show this when NOT processing -->
+                <span x-show="!isProcessing">
+                  Execute Batch (<span x-text="basket.length"></span>)
+                </span>
+
+                <!-- Show this ONLY when processing -->
+                <span x-show="isProcessing" x-cloak>
+                  <span
+                    class="spinner-border spinner-border-sm me-2"
+                    role="status"
+                  ></span>
+                  Processing...
+                </span>
               </button>
             </div>
           </div>
@@ -372,9 +409,40 @@
         this.selectedTenses = [task.tense];
       },
 
-      executeBatch() {
-        // ... (This will be implemented in Phase 2.2 with fetch API) ...
-        alert("Submitting " + this.basket.length + " tasks to the backend!");
+      async executeBatch() {
+        // 1. Guard clause: prevent execution if basket empty or already working
+        if (this.basket.length === 0 || this.isProcessing) return;
+
+        // 2. Set loading state
+        this.isProcessing = true;
+
+        const payload = {
+          filename: this.filename || "batch_export",
+          tasks: this.basket,
+        };
+
+        try {
+          const response = await fetch("/batch-scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            // Success: Redirect handles the "isProcessing" reset by leaving the page
+            window.location.href = result.redirect_url;
+          } else {
+            // Error: Reset state so user can fix and try again
+            alert("Error: " + (result.error || "Batch execution failed."));
+            this.isProcessing = false;
+          }
+        } catch (error) {
+          console.error("Connection Error:", error);
+          alert("Could not connect to the server.");
+          this.isProcessing = false;
+        }
       },
     };
   }

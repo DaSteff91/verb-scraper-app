@@ -81,3 +81,33 @@ class InputValidator:
             return False
 
         return True
+
+    @staticmethod
+    def validate_batch(tasks: list) -> bool:
+        """
+        Validates a list of scrape tasks to ensure data integrity.
+
+        Each task in the list is checked against the standard verb formatting
+        rules and grammatical constraints (mode/tense mapping).
+
+        Args:
+            tasks: A list of dictionaries, each containing 'verb', 'mode',
+                and 'tense' keys.
+
+        Returns:
+            bool: True if every task in the batch is valid, False otherwise.
+        """
+        if not tasks or not isinstance(tasks, list):
+            return False
+
+        for task in tasks:
+            verb = task.get("verb", "")
+            mode = task.get("mode", "")
+            tense = task.get("tense", "")
+
+            if not InputValidator.is_valid_verb(verb):
+                return False
+            if not InputValidator.is_valid_grammar(mode, tense):
+                return False
+
+        return True

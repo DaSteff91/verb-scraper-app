@@ -7,8 +7,7 @@ results from the database.
 
 import logging
 import io
-from typing import Union, List
-
+from typing import Union, List, cast, Any
 from flask import (
     Blueprint,
     flash,
@@ -17,6 +16,7 @@ from flask import (
     request,
     url_for,
     send_file,
+    jsonify,
 )
 from werkzeug.wrappers import Response as WerkzeugResponse
 
@@ -42,12 +42,13 @@ def index() -> Union[str, WerkzeugResponse]:
         Union[str, Response]: The rendered HTML template or a redirect response.
     """
     if request.method == "POST":
-        # Extract raw form data
+        # 1. Extract raw form data
         verb_raw: str = request.form.get("verb", "").strip()
         mode: str = request.form.get("mode", "Indicativo")
         tense: str = request.form.get("tense", "Presente")
+        custom_filename: str = request.form.get("filename", "").strip()
 
-        # 1. Validate Input before any logic happens
+        # 2. Validate Input
         if not InputValidator.is_valid_verb(verb_raw):
             flash("Invalid verb format. Please use only letters and hyphens.", "danger")
             return render_template("index.html")
@@ -56,22 +57,30 @@ def index() -> Union[str, WerkzeugResponse]:
             flash("Invalid grammatical selection detected.", "danger")
             return render_template("index.html")
 
-        # Lazy Import: This prevents 'requests' and 'bs4' from loading until a POST happens
+        # 3. Sanitize and prepare
+        verb_infinitive: str = verb_raw.lower()
+
+        # 4. Lazy Import and Scrape
         from src.services.verb_manager import VerbManager
 
-        # 2. Proceed with sanitized lowercase verb
-        verb_infinitive: str = verb_raw.lower()
         manager: VerbManager = VerbManager()
         success: bool = manager.get_or_create_verb_data(verb_infinitive, mode, tense)
 
         if success:
             logger.info("Successfully processed verb: %s", verb_infinitive)
+
+            # 5. Determine filename for the redirect
+            filename = (
+                custom_filename if custom_filename else f"{verb_infinitive}_export"
+            )
+
             return redirect(
                 url_for(
                     "main.results",
                     verb_infinitive=verb_infinitive,
                     mode=mode,
                     tense=tense,
+                    filename=filename,
                 )
             )
 
@@ -108,12 +117,15 @@ def results(verb_infinitive: str) -> str:
         .all()
     )  # type: ignore
 
+    filename: str = request.args.get("filename", f"{verb_infinitive}_export")
+
     return render_template(
         "results.html",
         verb=verb,
         conjugations=display_conjugations,
         mode=mode_name,
         tense=tense_name,
+        filename=filename,
     )
 
 
@@ -160,6 +172,8 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
             )
         )
 
+    custom_filename: str = request.args.get("filename", "")
+
     # Lazy Import of Exporter logic
     from src.services.exporter import AnkiExporter
 
@@ -174,10 +188,60 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
     mem_file.seek(0)
 
     # Generate sanitized filename
-    filename: str = f"{verb_infinitive}_{mode_name}_{tense_name}.csv".lower().replace(
-        " ", "_"
-    )
+    if custom_filename:
+        filename = f"{custom_filename}.csv"
+    else:
+        filename = f"{verb_infinitive}_{mode_name}_{tense_name}.csv"
+
+    filename = filename.lower().replace(" ", "_")
 
     return send_file(
         mem_file, mimetype="text/csv", as_attachment=True, download_name=filename
+    )
+
+
+@main_bp.route("/batch-scrape", methods=["POST"])
+def batch_scrape() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+    """
+    Handle the JSON payload for multi-scraping tasks.
+
+    This endpoint receives a list of verbs and grammatical combinations from
+    the frontend "basket". It validates the integrity of the entire batch
+    before triggering the background scraping process.
+
+    Returns:
+        WerkzeugResponse: A JSON response containing a success status and
+            redirect URL, or a 400 error if validation fails.
+    """
+    # Cast the JSON payload to a dictionary so Pylance understands 'get'
+    raw_data: Any = request.get_json()
+    data = cast(dict[str, Any], raw_data)
+
+    if not data or "tasks" not in data:
+        return jsonify({"error": "No tasks provided"}), 400
+
+    # Explicitly type the extracted variables
+    tasks = cast(list[dict[str, str]], data.get("tasks", []))
+    filename = cast(str, data.get("filename", "batch_export"))
+
+    # Lazy import remains inside for memory optimization
+    from src.services.validator import InputValidator
+
+    if not InputValidator.validate_batch(tasks):
+        logger.warning("Batch validation failed for input: %s", data)
+        return jsonify({"error": "One or more tasks contain invalid data"}), 400
+
+    logger.info(
+        "Batch request accepted: %d tasks for filename: %s", len(tasks), filename
+    )
+
+    # Note: Phase 3 will implement the Scraper Service orchestration here.
+
+    # Redirect to index temporarily until the unified results page is ready
+    return jsonify(
+        {
+            "status": "success",
+            "message": f"Processing {len(tasks)} verbs",
+            "redirect_url": url_for("main.index"),
+        }
     )

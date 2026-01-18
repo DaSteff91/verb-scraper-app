@@ -73,6 +73,9 @@
     console.log("Download triggered...");
     const skip = document.getElementById("skipCheck").checked;
 
+    // Get the filename passed from the Flask route
+    const customFilename = "{{ filename | safe }}";
+
     // Construct the base URL using Jinja2
     // url_for generates a path like "/export/comer?mode=Indicativo&tense=Presente"
     const basePath =
@@ -83,6 +86,10 @@
 
     if (skip) {
       url.searchParams.append("skip_tu_vos", "true");
+    }
+
+    if (customFilename) {
+      url.searchParams.append("filename", customFilename);
     }
 
     console.log("Redirecting to:", url.href);
