@@ -100,35 +100,41 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_PRIVATE_SSH_KEY }}
           script: |
-            # 1. Capture the raw image name
+            # 1. Image and Tag Setup
             RAW_IMAGE="ghcr.io/${{ github.repository }}"
-            IMAGE_TAG="${{ needs.versioning.outputs.new_version }}"
-            
-            # 2. Convert image name to lowercase using 'tr'
             IMAGE_NAME=$(echo "$RAW_IMAGE" | tr '[:upper:]' '[:lower:]')
+            IMAGE_TAG="${{ needs.versioning.outputs.new_version }}"
             FULL_IMAGE_PATH="$IMAGE_NAME:$IMAGE_TAG"
             
+            # 2. Server Configuration
             CONTAINER_NAME="verb-scraper-app"
             PORT_HOST=5050
-            
-            mkdir -p ~/deployments/verb-scraper
-            cd ~/deployments/verb-scraper
+            APP_DIR="$HOME/verb-scraper-app"
 
-            echo "Deploying version: $IMAGE_TAG"
-            echo "Clean Image Path: $FULL_IMAGE_PATH"
+            echo "Target Directory: $APP_DIR"
+            echo "Deploying Version: $IMAGE_TAG"
 
+            # Create directory if missing and enter it
+            mkdir -p $APP_DIR
+            cd $APP_DIR
+
+            # 3. Registry Login
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Use the lowercase variables here
+            # 4. Pull and Cycle Container
             docker pull $FULL_IMAGE_PATH
 
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
+            # 5. Run with correct relative paths
             docker run -d \
               --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               -p $PORT_HOST:5050 \
-              -v $(pwd)/instance:/app/instance \
-              --env-file $(pwd)/.env \
+              -v $APP_DIR/instance:/app/instance \
+              --env-file $APP_DIR/.env \
               $FULL_IMAGE_PATH
+
+            # Cleanup old images to save disk space
+            docker image prune -f
