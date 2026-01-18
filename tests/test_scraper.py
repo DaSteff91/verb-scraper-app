@@ -86,3 +86,50 @@ def test_get_conjugations_mode_not_found(
     results = scraper.get_conjugations("falar", "NonExistentMode", "Presente")
 
     assert results is None
+
+
+# ... (existing imports and tests) ...
+
+
+def test_get_conjugations_network_error(requests_mock: requests_mock.Mocker) -> None:
+    """
+    Test that the scraper returns None when a 404 or network error occurs.
+    """
+    scraper = ConjugacaoScraper()
+    # Mock a 404 Not Found error
+    requests_mock.get(f"{scraper.base_url}missing/", status_code=404)
+
+    results = scraper.get_conjugations("missing", "Indicativo", "Presente")
+
+    assert results is None
+
+
+def test_get_conjugations_missing_tense(
+    requests_mock: requests_mock.Mocker, sample_html: Callable[[str], str]
+) -> None:
+    """
+    Test that the scraper returns None if the Mode exists but the Tense doesn't.
+    """
+    scraper = ConjugacaoScraper()
+    mock_content = sample_html("falar.html")
+    requests_mock.get(f"{scraper.base_url}falar/", text=mock_content)
+
+    # Search for a tense that doesn't exist under Indicativo
+    results = scraper.get_conjugations("falar", "Indicativo", "TenseFromMars")
+
+    assert results is None
+
+
+def test_get_conjugations_corrupt_html(requests_mock: requests_mock.Mocker) -> None:
+    """
+    Test that the scraper handles completely malformed or unexpected HTML.
+    """
+    scraper = ConjugacaoScraper()
+    # Mock a page that only has the mode header but no content
+    broken_html = "<h3>Indicativo</h3><p>Empty content</p>"
+    requests_mock.get(f"{scraper.base_url}broken/", text=broken_html)
+
+    # Search for a tense that is definitely not there
+    results = scraper.get_conjugations("broken", "Indicativo", "Presente")
+
+    assert results is None
