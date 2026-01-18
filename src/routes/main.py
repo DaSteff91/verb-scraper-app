@@ -157,7 +157,7 @@ def export_csv(verb_infinitive: str) -> Union[str, WerkzeugResponse]:
 
     # 4. Prepare in-memory binary stream for Flask
     mem_file: io.BytesIO = io.BytesIO()
-    mem_file.write(csv_content.encode("utf-8"))
+    mem_file.write(csv_content.encode("utf-8-sig"))
     mem_file.seek(0)
 
     # Generate sanitized filename

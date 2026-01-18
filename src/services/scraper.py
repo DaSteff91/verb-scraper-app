@@ -99,7 +99,8 @@ class ConjugacaoScraper:
 
             for part in parts:
                 temp_soup = BeautifulSoup(part, "html.parser")
-                text = temp_soup.get_text(separator=" ").strip()
+                raw_text = temp_soup.get_text().strip()
+                text = " ".join(raw_text.split())
                 if text:
                     clean_lines.append(text)
 
