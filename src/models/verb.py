@@ -19,7 +19,9 @@ class Verb(db.Model):  # type: ignore
 
     id: Mapped[int] = mapped_column(primary_key=True)
     infinitive: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(datetime.UTC)
+    )
 
     conjugations: Mapped[List["Conjugation"]] = relationship(
         back_populates="verb", cascade="all, delete-orphan"
