@@ -125,7 +125,9 @@ class VerbManager:
             logger.error("Database error while saving %s: %s", verb_infinitive, e)
             return False
 
-    def process_batch(self, tasks: List[Dict[str, str]]) -> Dict[str, int]:
+    def process_batch(
+        self, tasks: List[Dict[str, str]], job_id: Optional[str] = None
+    ) -> Dict[str, int]:
         """
         Orchestrates a batch of scraping tasks using a thread pool.
 
@@ -164,4 +166,28 @@ class VerbManager:
             results["success"],
             results["failed"],
         )
+
+        # If we have a job_id, let's mark it as 'processing'
+        if job_id:
+            with app_instance.app_context():
+                job = BatchJob.query.get(job_id)
+                if job:
+                    job.status = "processing"
+                    db.session.commit()
+
+        # ... (keep your ThreadPoolExecutor logic) ...
+
+        results["success"] = outcomes.count(True)
+        results["failed"] = outcomes.count(False)
+
+        # Update the job record to 'completed'
+        if job_id:
+            with app_instance.app_context():
+                job = BatchJob.query.get(job_id)
+                if job:
+                    job.status = "completed"
+                    job.success_count = results["success"]
+                    job.failed_count = results["failed"]
+                    job.completed_at = datetime.now(UTC)
+                    db.session.commit()
         return results
