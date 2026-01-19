@@ -2,39 +2,49 @@
 
 ![CI/CD Status](https://github.com/DaSteff91/verb-scraper-app/actions/workflows/release.yml/badge.svg)
 [![Latest Release](https://img.shields.io/github/v/release/DaSteff91/verb-scraper-app)](https://github.com/DaSteff91/verb-scraper-app/releases)
-[![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/DaSteff91/verb-scraper-app)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://psf/black)
 [![Author: Kite-Engineer](https://img.shields.io/badge/author-Kite--Engineer-orange)](https://www.kite-engineer.de)
 
 ## Summary
 
-The Verb Scraper App is a web application designed to automate the extraction, normalization, and persistence of Portuguese verb conjugations. Built with a focus on data integrity and software lifecycle management, the application provides a seamless pipeline from web scraping to SQLite persistence (5NF) and structured CSV export optimized for study tools such as [Anki](https://apps.ankiweb.net/).
+The Verb Scraper App is a web application and RESTful API
+designed to automate the extraction, normalization, and persistence of
+Portuguese verb conjugations. The system leverages an asynchronous multi-threaded
+orchestrator and a 5th Normal Form (5NF) SQLite schema to provide structured
+data for study tools such as Anki.
 
 ## System Architecture
 
-### Data Flow Diagram
+### Asynchronous Data Flow
 
-The following diagram illustrates the lifecycle of a scraping request within the Model-View-Controller (MVC) framework:
+The application utilizes a Non-Blocking "Restaurant Pager" pattern for batch
+requests to ensure API responsiveness and server stability.
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Browser)
-    participant C as Controller (Flask Blueprints)
-    participant S as Verb Manager Service
-    participant Sc as Scraper Service (BS4)
+    participant U as Client (Postman/Browser)
+    participant A as API Controller (Flask)
+    participant V as Verb Manager Service
+    participant DB as SQLite (5NF)
     participant W as External Website
-    participant DB as SQLite (SQLAlchemy 5NF)
 
-    U->>C: POST / (Verb, Mode, Tense)
-    C->>S: get_or_create_verb_data()
-    S->>Sc: get_conjugations()
-    Sc->>W: GET request / parse HTML
-    W-->>Sc: Raw HTML Table
-    Sc-->>S: Normalized String List
-    S->>DB: Map to Persons/Tenses/Modes
-    DB-->>S: Commit Transaction
-    S-->>C: Boolean Success
-    C->>U: Redirect to /results/<verb>
+    U->>A: POST /api/v1/batch (Task List)
+    A->>DB: Create BatchJob (Status: Pending)
+    A-->>U: 202 Accepted (Job ID)
+
+    Note over A,V: Background Thread Spawned
+    A->>V: process_batch(job_id)
+    V->>DB: Update BatchJob (Status: Processing)
+
+    loop Concurrent Scraping (Max Workers: 3)
+        V->>W: Scrape Conjugations
+        W-->>V: HTML Data
+        V->>DB: Persist 5NF Records
+    end
+
+    V->>DB: Update BatchJob (Status: Completed)
+    U->>A: GET /api/v1/batch/<job_id>
+    A-->>U: 200 OK (Results Summary)
 ```
 
 ### Directory Structure
@@ -42,154 +52,78 @@ sequenceDiagram
 ```text
 verb-scraper-app/
 ├── .github/                # CI/CD Workflows
-│   └── workflows/
-│       └── release.yml     # Automated SemVer, Build, and Deploy
 ├── instance/               # Local SQLite storage (excluded from Git)
 ├── src/                    # Source code
 │   ├── models/             # Database Schema (SQLAlchemy 5NF)
-│   │   ├── __init__.py
-│   │   └── verb.py         # Verb, Mode, Tense, Person, Conjugation
+│   │   └── verb.py         # Verb, Mode, Tense, Person, Conjugation, BatchJob
 │   ├── routes/             # Controllers (Flask Blueprints)
-│   │   └── main.py
+│   │   ├── main.py         # Web Interface routes
+│   │   └── api.py          # REST API v1 routes
 │   ├── services/           # Business Logic
+│   │   ├── auth.py         # API Key Authentication Decorator
 │   │   ├── scraper.py      # BeautifulSoup scoping logic
-│   │   ├── verb_manager.py # Orchestrates DB/Scraper interaction
-│   │   └── exporter.py     # CSV/Anki generation logic
-│   ├── static/             # Frontend assets (CSS/JS)
-│   ├── templates/          # Views (Jinja2 Templates)
-│   │   ├── base.html       # Master layout
-│   │   ├── index.html      # Search dashboard
-│   │   └── results.html    # Filtered data view
-│   ├── config.py           # Environment-based configuration
-│   ├── extensions.py       # Extension initialization (SQLAlchemy)
-│   └── __init__.py         # Application Factory (versioning source)
-├── tests/                  # Pytest suite
-├── Dockerfile              # Production slim image configuration
-├── docker-compose.yml      # Local and production orchestration
-├── pyproject.toml          # Build system and linting settings
-├── requirements.txt        # Managed dependencies
-└── run.py                  # WSGI entry point
+│   │   ├── verb_manager.py # Threaded batch orchestration
+│   │   ├── exporter.py     # Anki CSV generation (Native CSV)
+│   │   └── validator.py    # Input and Batch validation
+│   ├── templates/          # Jinja2 Templates (Dashboard & Accordion)
+│   ├── config.py           # Environment-based configuration (Fail-Fast)
+│   └── __init__.py         # Application Factory
+├── tests/                  # Pytest suite (Unit, Integration, Contract)
+├── Dockerfile              # Lean image (Python 3.13-slim)
+└── docker-compose.yml      # Orchestration (Single worker, multi-threaded)
 ```
-
-## Core Design Principles
-
-### Model-View-Controller (MVC)
-
-The application maintains strict separation of concerns to ensure testability and scalability:
-
-- **Model:** Uses SQLAlchemy 2.0 with a 5th Normal Form (5NF) relational schema to eliminate data redundancy.
-- **View:** Implements a responsive Bootstrap 5 interface with dynamic Jinja2 injection.
-- **Controller:** Utilizes Flask Blueprints to handle routing and input sanitization.
-
-### Advanced Scraping Logic
-
-The scraping engine solves the "nested span" and "duplicate header" issues common in irregular verb pages. It employs parent-container scoping to isolate the correct grammatical mode before searching for specific tenses. A double-clean normalization process ensures that inconsistent HTML whitespace is condensed into single-spaced, human-readable strings.
 
 ## Features
 
-- **Full 6-Person Paradigm:** Supports the complete Portuguese conjugation set.
-- **Dynamic UI Logic:** JavaScript-driven dependent dropdowns ensure users only select valid mode-tense combinations.
-- **Anki Integration:** Optimized CSV generation with UTF-8-SIG encoding that fits into Anki csv import.
-- **Stateless Execution:** CSV files are generated in-memory (RAM) using Byte-streams, making the application ideal for containerized environments.
+- Asynchronous Batch Processing: Concurrent scraping via ThreadPoolExecutor.
+- Secure REST API: Header-based authentication (X-API-KEY).
+- Regional Dialect Support: Automatically filters 2nd person (tu/vós) by default
+  for Brazilian Portuguese.
+- Dual Frontend: Responsive Bootstrap 5 / Alpine.js dashboard and a headless API.
+- Memory Optimized: Lazy-loading services keep the idle footprint under 60MB.
 
-## Deployment and Automation
+## API Documentation
 
-### Continuous Integration/Deployment
+### Authentication
 
-The project features a full CI/CD pipeline via GitHub Actions:
+All API requests require the following header:
+`X-API-KEY: <your_configured_key>`
 
-1.  **Versioning:** Conventional Commits trigger automated Semantic Versioning.
-2.  **Containerization:** Automated builds of Python 3.13-slim images.
-3.  **GHCR:** Images are hosted on the GitHub Container Registry.
-4.  **Automatic Deployment:** Successful builds trigger an SSH action to update the production environment on Ubuntu 24.04.
+### Endpoints
+
+| Method | Endpoint              | Description                                                    |
+| :----- | :-------------------- | :------------------------------------------------------------- |
+| GET    | `/api/v1/verbs/<inf>` | Get conjugations. Supports `?dialect=br\|pt` and `?anki=true`. |
+| POST   | `/api/v1/scrape`      | Trigger a single-verb scrape. Returns 201 Created.             |
+| POST   | `/api/v1/batch`       | Trigger background batch scrape. Returns 202 Accepted.         |
+| GET    | `/api/v1/batch/<id>`  | Poll status of a background job.                               |
 
 ## Local Development Setup
 
-Follow these steps to get a local development environment running on Linux or macOS.
+1. Create a `.env` file:
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/DaSteff91/verb-scraper-app.git
-cd verb-scraper-app
+```text
+SECRET_KEY=generate_a_random_string
+API_KEY=your_secure_api_token
 ```
 
-### 2. Environment Setup
-
-Create and activate a virtual environment using Python 3.13+:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 4. Configuration
-
-Create a local `.env` file with default development settings:
-
-```bash
-cat <<EOF > .env
-FLASK_APP=run.py
-FLASK_DEBUG=1
-SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex())')
-EOF
-```
-
-### 5. Launch the Application
-
-```bash
-python run.py
-```
-
-The application will be available at `http://127.0.0.1:5000`.
-
-## Production Deployment
-
-### Docker Orchestration
-
-The application is optimized for containerized environments using a non-privileged user and multi-worker Gunicorn. To build and launch the production container locally:
+2. Build and launch:
 
 ```bash
 docker compose up -d --build
 ```
 
-## Example Import in Anki
+## Quality Standards
 
-**Scraping details:**
-
-- Verb: ir
-- Mode: Indicativo
-- Tense: Presente
-
-**Result:**
-
-![ir_conjugation_anki](/images/20260118_anki_example.png)
-
-### Quality Standards
-
-- **Type Hinting:** Strictly enforced PEP 484 annotations.
-- **Documentation:** Google-style docstrings for all modules and classes.
-- **Linting:** Configured for Black, Flake8, and Mypy.
-
-## Roadmap
-
-- **Test Suite:** Automated unit testing for scraping edge cases.
-- **Library Browser:** Global dashboard for searching and managing all persisted verbs.
-- **Batch Operations:** Bulk scraping and multi-CSV export features.
+- Enforced PEP 484 type hinting (Pylance/Mypy compatible).
+- Global JSON error handling for 100% API reliability.
+- Automated Job Janitor for database maintenance.
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.
 
 ## Contact
 
-**Kite-Engineer** - by Stefan Merthan
-Website: [www.kite-engineer.de](http://www.kite-engineer.de)  
-Project Link: [https://github.com/DaSteff91/verb-scraper-app](https://github.com/DaSteff91/verb-scraper-app)
+Kite-Engineer - by Stefan Merthan
+Website: www.kite-engineer.de

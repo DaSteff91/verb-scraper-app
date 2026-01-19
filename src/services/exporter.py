@@ -2,13 +2,13 @@
 CSV Exporter Service.
 
 Handles the transformation of 5NF database records into Anki-ready CSV strings
-using in-memory buffers for Docker compatibility.
+using in-memory buffers for Docker compatibility and API integration.
 """
 
 import csv
 import io
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from src.models.verb import Conjugation
 
@@ -27,20 +27,20 @@ class AnkiExporter:
         skip_tu_vos: bool = False,
     ) -> str:
         """
-        Format conjugations into a 3-column CSV string.
+        Format conjugations into a single-row 3-column CSV string.
 
         Args:
             conjugations: List of Conjugation objects from the DB.
             verb_infinitive: The infinitive of the verb.
-            mode_name: Name of the grammatical mode.
-            tense_name: Name of the grammatical tense.
+            mode_name: Name of the grammatical mode (used for tagging).
+            tense_name: Name of the grammatical tense (used for tagging).
             skip_tu_vos: If True, filters out 2nd person sing/plural (tu/vós).
 
         Returns:
             str: The CSV content as a formatted string.
         """
-        logger.info(
-            "Generating CSV for %s (%s %s). Filter tu/vós: %s",
+        logger.debug(
+            "Generating CSV row for %s (%s %s). Filter: %s",
             verb_infinitive,
             mode_name,
             tense_name,
@@ -49,23 +49,26 @@ class AnkiExporter:
 
         # 1. Filter logic
         filtered_list: List[str] = [
-            conj.value
+            str(conj.value)
             for conj in conjugations
-            if not (skip_tu_vos and conj.person.name in ["tu", "vós"])
+            if not (skip_tu_vos and str(conj.person.name) in ["tu", "vós"])
         ]
 
-        # 2. Replicate original format logic
+        if not filtered_list:
+            logger.warning(
+                "No conjugations found for CSV generation: %s", verb_infinitive
+            )
+            return ""
+
+        # 2. Replicate format logic
         formatted_conjugations: str = "\n".join(filtered_list)
         tag: str = f"{mode_name} {tense_name}"
 
-        # 3. Export to string buffer (In-memory) using standard csv module
+        # 3. Export to string buffer (In-memory)
         output: io.StringIO = io.StringIO()
-
-        # lineterminator='\n' matches Pandas default to_csv behavior on Linux
-        # quoting=csv.QUOTE_ALL matches Pandas quoting=1
         writer = csv.writer(output, quoting=csv.QUOTE_ALL, lineterminator="\n")
 
-        # 4. Write the single row (Column A, B, C)
+        # 4. Write the single row (Verb, Conjugations, Tag)
         writer.writerow([verb_infinitive, formatted_conjugations, tag])
 
         return output.getvalue()
@@ -75,33 +78,39 @@ class AnkiExporter:
         batch_data: List[Dict[str, Any]], skip_tu_vos: bool = False
     ) -> str:
         """
-        Generates a single CSV string for a collection of verbs/tenses.
+        Generates a multi-row CSV string for a collection of verbs/tenses.
 
         Args:
-            batch_data: A list of dicts, each containing:
+            batch_data: A list of dictionaries, each containing:
                 - 'verb': Infinitive string
                 - 'conjugations': List of Conjugation objects
                 - 'mode': Mode string
                 - 'tense': Tense string
+            skip_tu_vos: If True, filters out 2nd person forms globally.
+
+        Returns:
+            str: The aggregated CSV content.
         """
+        logger.info("Generating bulk CSV for %d entries.", len(batch_data))
+
         output = io.StringIO()
         writer = csv.writer(output, quoting=csv.QUOTE_ALL, lineterminator="\n")
 
         for item in batch_data:
-            verb_inf = item["verb"]
-            mode = item["mode"]
-            tense = item["tense"]
-            conjugations = item["conjugations"]
+            verb_inf: str = str(item.get("verb", "unknown"))
+            mode: str = str(item.get("mode", ""))
+            tense: str = str(item.get("tense", ""))
+            conjugations: List[Conjugation] = item.get("conjugations", [])
 
-            filtered_list = [
-                c.value
+            filtered_list: List[str] = [
+                str(c.value)
                 for c in conjugations
-                if not (skip_tu_vos and c.person.name in ["tu", "vós"])
+                if not (skip_tu_vos and str(c.person.name) in ["tu", "vós"])
             ]
 
-            formatted_conjs = "\n".join(filtered_list)
-            tag = f"{mode} {tense}"
-
-            writer.writerow([verb_inf, formatted_conjs, tag])
+            if filtered_list:
+                formatted_conjs = "\n".join(filtered_list)
+                tag = f"{mode} {tense}".strip()
+                writer.writerow([verb_inf, formatted_conjs, tag])
 
         return output.getvalue()
