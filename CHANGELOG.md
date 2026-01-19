@@ -2,6 +2,37 @@
 
 <!-- version list -->
 
+## v1.13.0 (2026-01-19)
+
+### Bug Fixes
+
+- **fixing-some-content**: Adding lost stuff and new stuff in the readme
+  ([`dc10fe4`](https://github.com/DaSteff91/verb-scraper-app/commit/dc10fe4725f9090341fd25ebfb70438647495e36))
+
+### Features
+
+- **add-new-job-based-data-scraping-logic-for-multi-scraping-via-api**: Create new methods and
+  changes in existing code to support job based scraping as well as apply changes to the sql db
+  ([`1e76c39`](https://github.com/DaSteff91/verb-scraper-app/commit/1e76c39bdd3efd5c4f1c169316793aea4597124b))
+
+- **implement-asynchronous-batch-processing-with-job-status-tracking**: Refactor API to asynchronous
+  "Restaurant Pager" architecture
+  ([`385ff24`](https://github.com/DaSteff91/verb-scraper-app/commit/385ff244a6e9fc6ee6ad74665fd23f46db9fd83c))
+
+- **implement-asynchronous-REST-API-v1-and-professional-error-handling**: - Added secure API v1 with
+  header-based X-API-KEY authentication.
+  ([`11469cc`](https://github.com/DaSteff91/verb-scraper-app/commit/11469cc7e34a6ec0f7901114f02908317da47c93))
+
+- **implement-filtered-GET,-global-error-handling,-and-job-janitor**: Feat: finalize professional
+  API robustness
+  ([`d09954b`](https://github.com/DaSteff91/verb-scraper-app/commit/d09954b133297abc1b1390025def714c8acb9dcb))
+
+-
+  **implement-REST-API-v1-and-secure-configuration-layer---Added-header-based-API-key-authentication-using-the-decorator-pattern.---Implemented-GET-/verbs/<infinitive>-with-manual-5NF-to-JSON-serialization.---Added-POST-/scrape-and-POST-/batch-for-single-and-multi-threaded-scraping.---Implemented-"Fail-Fast"-validation-for-API_KEY-in-Config.---Maintained-lazy-loading-and-strictly-typed-function-signatures.**:
+  Adding new files and routes that enable to reach the app via an api using an api key
+  ([`173c144`](https://github.com/DaSteff91/verb-scraper-app/commit/173c144bb6081412febba07c4d65f40b30727918))
+
+
 ## v1.12.0 (2026-01-19)
 
 ### Features
