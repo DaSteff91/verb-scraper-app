@@ -35,8 +35,6 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     db.init_app(app)  # type: ignore
 
     with app.app_context():
-        # noqa: F401 stops "Unused Import" warnings
-        # type: ignore stops Pylance from complaining about missing .models
         from src.models import verb  # noqa: F401 # type: ignore
 
         logger.debug("Creating database tables if they don't exist...")
@@ -44,6 +42,12 @@ def create_app(config_class: type[Config] = Config) -> Flask:
         db.create_all()  # type: ignore
         logger.info("Database synchronized.")
         logger.info("Verb Scraper v%s initialized.", __version__)
+
+        from src.services.verb_manager import VerbManager
+
+        VerbManager().seed_default_data()
+
+        logger.info("Database synchronized and seeded.")
 
     from src.routes.main import main_bp
 
