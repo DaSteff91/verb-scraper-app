@@ -3,14 +3,19 @@ Database models for Verb and its related conjugations.
 """
 
 from __future__ import annotations
-from datetime import UTC, datetime
+
+import logging
 import uuid
-from typing import Dict, List, Any, Optional
+from datetime import UTC, datetime
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.extensions import db
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class Verb(db.Model):  # type: ignore
@@ -104,6 +109,7 @@ class BatchJob(db.Model):  # type: ignore
             Dict[str, Any]: A dictionary representing the job's current state,
                 including progress counts and ISO-formatted timestamps.
         """
+        logger.debug("Serializing BatchJob [%s] to dictionary.", self.id)
         return {
             "job_id": str(self.id),
             "status": str(self.status),

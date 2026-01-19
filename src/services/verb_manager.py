@@ -10,14 +10,16 @@ import logging
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from typing import Dict, List, Optional
 
-from flask import Flask, current_app
+from flask import current_app
 
 from src.extensions import db
-from src.models.verb import Conjugation, Mode, Person, Tense, Verb
+from src.models.verb import BatchJob, Conjugation, Mode, Person, Tense, Verb
 from src.services.scraper import ConjugacaoScraper
 
+# Initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +54,13 @@ class VerbManager:
         Returns:
             bool: True if persistence was successful, False otherwise.
         """
+        logger.debug(
+            "Starting persistence for %s (%s %s)",
+            verb_infinitive,
+            mode_name,
+            tense_name,
+        )
+
         # 1. Scrape the raw data
         forms: Optional[List[str]] = self.scraper.get_conjugations(
             verb_infinitive, mode_name, tense_name
@@ -71,16 +80,21 @@ class VerbManager:
                     verb = Verb(infinitive=verb_infinitive)
                     db.session.add(verb)
                     db.session.flush()  # Try to push to DB immediately
+                    logger.debug("Created new verb entry: %s", verb_infinitive)
                 except Exception:
                     # If another thread beat us to it, rollback the flush and fetch it
                     db.session.rollback()
                     verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
+                    logger.debug(
+                        "Verb %s was created by another thread.", verb_infinitive
+                    )
 
             # 3. Get or Create Mode
             mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore
             if not mode:
                 mode = Mode(name=mode_name)
                 db.session.add(mode)
+                db.session.flush()
 
             # 4. Get or Create Tense (linked to Mode)
             tense = Tense.query.filter_by(name=tense_name, mode=mode).first()  # type: ignore
@@ -118,6 +132,12 @@ class VerbManager:
                     db.session.add(conj)
 
             db.session.commit()
+            logger.info(
+                "Successfully persisted %s (%s %s)",
+                verb_infinitive,
+                mode_name,
+                tense_name,
+            )
             return True
 
         except Exception as e:
@@ -133,14 +153,22 @@ class VerbManager:
 
         Args:
             tasks: A list of dictionaries containing 'verb', 'mode', and 'tense'.
+            job_id: Optional ID of a BatchJob record to update during execution.
 
         Returns:
             Dict[str, int]: A summary of the batch execution (total, success, failed).
         """
         results = {"total": len(tasks), "success": 0, "failed": 0}
-
-        # We grab the actual app object to pass to threads
         app_instance = current_app._get_current_object()  # type: ignore
+
+        # --- Job Status Update: PROCESSING ---
+        if job_id:
+            with app_instance.app_context():
+                job = BatchJob.query.get(job_id)
+                if job:
+                    job.status = "processing"
+                    db.session.commit()
+                    logger.info("Job [%s] status updated to PROCESSING", job_id)
 
         def threaded_task(task: Dict[str, str]) -> bool:
             """Internal worker to handle a single scrape within an app context."""
@@ -152,7 +180,7 @@ class VerbManager:
                     task["verb"], task["mode"], task["tense"]
                 )
 
-        logger.info("Starting batch process for %d tasks...", len(tasks))
+        logger.info("Starting batch execution for %d tasks...", len(tasks))
 
         # We use max_workers=3 to keep it fast but respectful to the source site
         with ThreadPoolExecutor(max_workers=3) as executor:
@@ -161,26 +189,7 @@ class VerbManager:
         results["success"] = outcomes.count(True)
         results["failed"] = outcomes.count(False)
 
-        logger.info(
-            "Batch finished. Success: %d, Failed: %d",
-            results["success"],
-            results["failed"],
-        )
-
-        # If we have a job_id, let's mark it as 'processing'
-        if job_id:
-            with app_instance.app_context():
-                job = BatchJob.query.get(job_id)
-                if job:
-                    job.status = "processing"
-                    db.session.commit()
-
-        # ... (keep your ThreadPoolExecutor logic) ...
-
-        results["success"] = outcomes.count(True)
-        results["failed"] = outcomes.count(False)
-
-        # Update the job record to 'completed'
+        # --- Job Status Update: COMPLETED ---
         if job_id:
             with app_instance.app_context():
                 job = BatchJob.query.get(job_id)
@@ -190,4 +199,11 @@ class VerbManager:
                     job.failed_count = results["failed"]
                     job.completed_at = datetime.now(UTC)
                     db.session.commit()
+                    logger.info(
+                        "Job [%s] completed. Success: %d, Failed: %d",
+                        job_id,
+                        results["success"],
+                        results["failed"],
+                    )
+
         return results
