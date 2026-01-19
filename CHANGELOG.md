@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.12.0 (2026-01-19)
+
+### Features
+
+- **changing-the-ui-following-good-practises-of-webdesign-with-mobile-first**: Adding css stylesheet
+  and reworking all html pages accordingly
+  ([`55e62bc`](https://github.com/DaSteff91/verb-scraper-app/commit/55e62bcd6c60e5a54da7a96f92bf3c363078dd5d))
+
+
 ## v1.11.0 (2026-01-18)
 
 ### Bug Fixes
