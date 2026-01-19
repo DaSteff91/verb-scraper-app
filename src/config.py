@@ -26,6 +26,13 @@ class Config:
 
     SECRET_KEY: str = _secret
 
+    _api_key = os.environ.get("API_KEY")
+
+    if not _api_key:
+        raise ValueError("No API_KEY set for the application.")
+
+    API_KEY: str = _api_key
+
     # Database - Absolute Path Logic
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     INSTANCE_PATH: Path = BASE_DIR / "instance"

@@ -49,6 +49,10 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     app.register_blueprint(main_bp)
 
+    from src.routes.api import api_bp
+
+    app.register_blueprint(api_bp)
+
     @app.context_processor
     def inject_version() -> dict[str, str]:
         return dict(version=__version__)
