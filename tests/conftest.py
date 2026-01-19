@@ -5,7 +5,6 @@ This module defines the fixtures required for testing the Flask application,
 including the app instance, database setup, and mock data loaders.
 """
 
-import os
 from pathlib import Path
 from typing import Generator
 
