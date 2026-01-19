@@ -215,6 +215,7 @@ class VerbManager:
         verb_inf = "comer"
         # Check if already seeded to avoid redundant logic
         if Verb.query.filter_by(infinitive=verb_inf).first():
+            logger.debug("Database already seeded with '%s'.", verb_inf)
             return
 
         logger.info("Seeding default data: %s", verb_inf)
