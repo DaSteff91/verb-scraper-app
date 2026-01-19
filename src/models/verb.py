@@ -123,3 +123,29 @@ class BatchJob(db.Model):  # type: ignore
             if self.completed_at
             else None,
         }
+
+    @classmethod
+    def cleanup_old_jobs(cls, hours: int = 24) -> int:
+        """
+        Deletes batch jobs older than the specified number of hours.
+
+        Args:
+            hours: The age threshold in hours.
+
+        Returns:
+            int: The number of deleted job records.
+        """
+        threshold = datetime.now(UTC).timestamp() - (hours * 3600)
+        # Convert timestamp back to datetime for comparison
+        threshold_dt = datetime.fromtimestamp(threshold, UTC)
+
+        # Identify old jobs
+        old_jobs = cls.query.filter(cls.created_at < threshold_dt).all()
+        count = len(old_jobs)
+
+        for job in old_jobs:
+            db.session.delete(job)
+
+        db.session.commit()
+        logger.info("Janitor: Cleaned up %d jobs older than %d hours.", count, hours)
+        return count

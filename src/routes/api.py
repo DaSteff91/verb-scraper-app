@@ -4,16 +4,16 @@ API v1 Routes.
 Provides JSON endpoints for searching and scraping verbs.
 """
 
-import json
 import logging
 import threading
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Union, cast, Optional
 
 from flask import Blueprint, current_app, jsonify, request, url_for
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from src.extensions import db
 from src.models.verb import BatchJob, Conjugation, Mode, Tense, Verb
+from werkzeug.exceptions import HTTPException
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -25,36 +25,54 @@ api_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 @api_bp.route("/verbs/<infinitive>", methods=["GET"])
 def get_verb(infinitive: str) -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     """
-    Fetch all scraped data for a specific verb.
+    Fetch scraped data for a specific verb, with optional filtering.
     """
     from src.services.auth import require_api_key
 
     @require_api_key
     def handle_request() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+        # 1. Cast request args to satisfy str expectations
+        filter_mode: Optional[str] = request.args.get("mode")
+        filter_tense: Optional[str] = request.args.get("tense")
+
         logger.info("API GET request for verb: %s", infinitive)
-        verb = Verb.query.filter_by(infinitive=infinitive.lower()).first()
+
+        # 2. Cast query result to prove the object type to Pylance
+        verb = cast(
+            Optional[Verb], Verb.query.filter_by(infinitive=infinitive.lower()).first()
+        )
 
         if not verb:
-            logger.warning("API GET failed: Verb '%s' not found.", infinitive)
             return jsonify({"error": f"Verb '{infinitive}' not found."}), 404
 
+        # proved as Verb now, so created_at.isoformat() is known
         result: Dict[str, Any] = {
-            "infinitive": verb.infinitive,
+            "infinitive": str(verb.infinitive),
             "scraped_at": verb.created_at.isoformat(),
+            "filters_applied": {"mode": filter_mode, "tense": filter_tense},
             "conjugations": [],
         }
 
-        for conj in verb.conjugations:
+        # 3. Cast the collection to ensure loop variable is known as 'Conjugation'
+        for conj in cast(List[Conjugation], verb.conjugations):
+            # Proving nested relationship names
+            m_name: str = str(conj.tense.mode.name)
+            t_name: str = str(conj.tense.name)
+
+            if filter_mode and m_name.lower() != filter_mode.lower():
+                continue
+            if filter_tense and t_name.lower() != filter_tense.lower():
+                continue
+
             result["conjugations"].append(
                 {
-                    "mode": conj.tense.mode.name,
-                    "tense": conj.tense.name,
-                    "person": conj.person.name,
-                    "value": conj.value,
+                    "mode": m_name,
+                    "tense": t_name,
+                    "person": str(conj.person.name),
+                    "value": str(conj.value),
                 }
             )
 
-        logger.debug("Successfully serialized verb: %s", infinitive)
         return jsonify(result)
 
     return handle_request()
@@ -202,3 +220,31 @@ def get_batch_status(
         return jsonify(job.to_dict()), 200
 
     return handle_request()
+
+
+@api_bp.app_errorhandler(Exception)
+def handle_api_exception(e: Exception) -> tuple[WerkzeugResponse, int]:
+    """
+    Global error handler for all exceptions occurring within the API blueprint.
+
+    Ensures that even internal server errors return a valid JSON object
+    instead of the default HTML error pages.
+    """
+    # 1. Handle standard Flask/HTTP errors (404, 405, etc.)
+    if isinstance(e, HTTPException):
+        response = jsonify(
+            {"error": e.name, "message": e.description, "status_code": e.code}
+        )
+        return response, cast(int, e.code)
+
+    # 2. Handle unexpected Python crashes (500 errors)
+    logger.exception("Unexpected API error occurred: %s", str(e))
+
+    response = jsonify(
+        {
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred on the server.",
+            "status_code": 500,
+        }
+    )
+    return response, 500
