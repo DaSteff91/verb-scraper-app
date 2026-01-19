@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v1.15.0 (2026-01-19)
+
+### Bug Fixes
+
+- **add-a-logging-line-for-seeding**: Add a logging line to see if seeding data was already in the
+  db
+  ([`7cc1ba0`](https://github.com/DaSteff91/verb-scraper-app/commit/7cc1ba02bb9dd066738f9c36ca53751c0a230f04))
+
+- **adding-post-testing-to-the-ci/cd-pipeline**: Finalizing the branch before merging
+  ([`648cc08`](https://github.com/DaSteff91/verb-scraper-app/commit/648cc0894c7d2ee4df20abae9d3dfd244e85a1a2))
+
+### Features
+
+- **adding-the-finalized-tests-for-the-batch-processing**: Finishing all tests for remote api
+  testing
+  ([`50de2a7`](https://github.com/DaSteff91/verb-scraper-app/commit/50de2a75d3d6781f7e7d2d986cb597a029c7e360))
+
+- **start-adding-remote-api-test**: Adding both, local and online proceedures vor api v1
+  ([`612f643`](https://github.com/DaSteff91/verb-scraper-app/commit/612f643bc01cddc436d965ff91bf011df11180f3))
+
+
 ## v1.14.0 (2026-01-19)
 
 ### Features
