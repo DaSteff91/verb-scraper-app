@@ -184,4 +184,4 @@ jobs:
         env:
           TEST_API_URL: "https://conjugator.kite-engineer.de"
           TEST_API_KEY: "${{ secrets.API_KEY }}"
-        run: pytest -c /dev/null tests/remote/
+        run: pytest tests/remote/
