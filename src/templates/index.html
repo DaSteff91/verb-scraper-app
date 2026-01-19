@@ -1,278 +1,219 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center" x-data="scrapeComponent()">
-  <div class="col-md-8">
-    <!-- 1. Multi-Scraping Toggle -->
-    <div class="form-check form-switch mb-4 d-flex justify-content-center">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        id="multiToggle"
-        x-model="multiScrape"
-        @change="resetSelections()"
-      />
-      <label class="form-check-label ms-2 fw-bold" for="multiToggle">
-        Multi-Scraping Mode
-      </label>
-    </div>
-
-    <div class="card shadow border-0 overflow-hidden">
-      <div class="card-body p-4 p-md-5">
-        <h3
-          class="card-title text-center mb-5 fw-bold"
-          x-text="multiScrape ? 'Batch Configuration' : 'Conjugate Verb'"
+  <div class="col-12 col-lg-10 col-xl-8">
+    <!-- Multi-Mode Switch Card -->
+    <section
+      class="modern-card p-4 mb-4 d-flex align-items-center justify-content-between"
+      aria-labelledby="multi-mode-label"
+    >
+      <div>
+        <h2
+          id="multi-mode-label"
+          class="h6 mb-1 fw-bold text-white text-uppercase"
         >
-          Conjugate Verb
-        </h3>
+          Multi-Scraping Mode
+        </h2>
+        <p class="text-muted small mb-0">
+          Aggregate multiple tenses into a single batch
+        </p>
+      </div>
+      <div class="form-check form-switch p-0 m-0">
+        <!-- Large, high-contrast switch -->
+        <input
+          class="form-check-input ms-0"
+          type="checkbox"
+          id="multiToggle"
+          role="switch"
+          x-model="multiScrape"
+          @change="resetSelections()"
+          aria-label="Toggle Multi-Scraping"
+        />
+      </div>
+    </section>
 
-        <form
-          method="POST"
-          id="scrapeForm"
-          x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
-        >
-          <!-- These hidden inputs ensure Single Mode still works with your Highlighter Pills -->
-          <input type="hidden" name="verb" :value="verb" />
-          <input type="hidden" name="mode" :value="selectedModes[0]" />
-          <input type="hidden" name="tense" :value="selectedTenses[0]" />
-          <!-- Verb Input Section -->
-          <div class="mb-5">
-            <label class="form-label fw-bold text-muted small uppercase"
-              >Verb (Infinitive)</label
-            >
-            <input
-              type="text"
-              class="form-control form-control-lg border-2 shadow-sm"
-              id="verb"
-              name="verb"
-              placeholder="e.g., ir"
-              required
-              autofocus
-              x-model="verb"
-            />
-          </div>
+    <!-- Main Form Card -->
+    <section class="modern-card p-4 p-md-5 mb-5">
+      <form
+        method="POST"
+        id="scrapeForm"
+        x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
+      >
+        <input type="hidden" name="verb" :value="verb" />
+        <input type="hidden" name="mode" :value="selectedModes[0]" />
+        <input type="hidden" name="tense" :value="selectedTenses[0]" />
+        <input type="hidden" name="filename" :value="filename" />
 
-          <!-- Selection Matrix -->
-          <div class="row g-4">
-            <!-- Mode Selection: Now using Highlighter Pills for both modes -->
-            <div class="col-12">
-              <div
-                class="d-flex justify-content-between align-items-center mb-2"
-              >
-                <label class="form-label fw-bold text-muted small uppercase m-0"
-                  >Mode</label
-                >
-              </div>
+        <div class="mb-5">
+          <label for="verb" class="form-label small text-uppercase mb-3"
+            >Portuguese Infinitive</label
+          >
+          <input
+            type="text"
+            class="form-control form-control-lg py-3 fs-3"
+            id="verb"
+            name="verb"
+            placeholder="e.g., falar"
+            required
+            autofocus
+            x-model="verb"
+          />
+        </div>
+
+        <div class="row g-4">
+          <!-- Mode Selection -->
+          <div class="col-12">
+            <fieldset>
+              <legend class="small text-uppercase mb-3">
+                Grammatical Mode
+              </legend>
               <div class="d-flex flex-wrap gap-2">
                 <template x-for="m in ['Indicativo', 'Subjuntivo']" :key="m">
                   <button
                     type="button"
-                    class="btn btn-sm rounded-pill px-4 py-2 fw-bold transition-all border-2"
-                    :class="selectedModes.includes(m) ? 'btn-primary border-primary shadow' : 'btn-outline-secondary'"
+                    class="btn btn-pill flex-grow-1 flex-md-grow-0"
+                    :class="selectedModes.includes(m) ? 'btn-primary' : 'btn-outline-secondary'"
                     x-text="m"
                     @click="toggleMode(m)"
+                    :aria-pressed="selectedModes.includes(m)"
                   ></button>
                 </template>
               </div>
-            </div>
+            </fieldset>
+          </div>
 
-            <!-- Tense Selection: Highlighter Pills with "Select All" next to label -->
-            <div class="col-12 mt-5">
+          <!-- Tense Selection -->
+          <div class="col-12">
+            <fieldset>
               <div
-                class="d-flex justify-content-between align-items-center mb-2"
+                class="d-flex justify-content-between align-items-end flex-nowrap mb-3"
               >
-                <label class="form-label fw-bold text-muted small uppercase m-0"
-                  >Tense</label
-                >
-                <!-- Select All only visible in Multi-Mode -->
+                <legend class="small text-uppercase m-0 text-nowrap">
+                  Tense Selection
+                </legend>
                 <button
                   x-show="multiScrape"
                   type="button"
-                  class="btn btn-link btn-sm p-0 text-decoration-none fw-bold"
+                  class="btn btn-link btn-sm p-0 text-decoration-none text-white fw-bold text-nowrap ms-2"
                   @click="toggleAllTenses()"
-                  x-text="selectedTenses.length === availableTenses.length ? 'Deselect All' : 'Select All'"
+                  x-text="selectedTenses.length === availableTenses.length ? 'Clear All' : 'Select All'"
                 ></button>
               </div>
-
               <div class="d-flex flex-wrap gap-2">
                 <template x-for="t in availableTenses" :key="t">
                   <button
                     type="button"
-                    class="btn btn-sm rounded-pill py-2 px-3 fw-bold transition-all border-2"
-                    :class="selectedTenses.includes(t) ? 'btn-primary border-primary shadow' : 'btn-outline-secondary border-secondary-subtle'"
+                    class="btn btn-pill flex-grow-1 flex-md-grow-0"
+                    :class="selectedTenses.includes(t) ? 'btn-primary' : 'btn-outline-secondary'"
                     @click="toggleTense(t)"
                     x-text="t"
+                    :aria-pressed="selectedTenses.includes(t)"
                   ></button>
                 </template>
               </div>
+            </fieldset>
+          </div>
+        </div>
+
+        <!-- Footer Action Bar -->
+        <div class="mt-5 pt-4 border-top border-secondary">
+          <div class="row align-items-center g-4">
+            <div class="col-md-7" x-show="!multiScrape" x-transition>
+              <label
+                for="single-filename"
+                class="form-label small text-uppercase mb-2"
+                >Export Filename</label
+              >
+              <div class="input-group">
+                <input
+                  type="text"
+                  id="single-filename"
+                  class="form-control"
+                  x-model="filename"
+                  placeholder="verbs_export"
+                />
+                <span class="input-group-text">.csv</span>
+              </div>
+            </div>
+            <div :class="multiScrape ? 'col-12' : 'col-md-5'">
+              <button type="submit" class="btn btn-primary w-100 py-3">
+                <span
+                  x-text="multiScrape ? 'Add to Batch' : 'Start Scrape'"
+                ></span>
+              </button>
             </div>
           </div>
+        </div>
+      </form>
+    </section>
 
-          <!-- Filename for Single-Scrape Mode -->
-          <div class="mt-4 pt-3 border-top" x-show="!multiScrape" x-transition>
-            <label class="form-label fw-bold text-muted small uppercase"
-              >Custom Export Filename</label
-            >
-            <div class="input-group input-group-sm">
-              <input
-                type="text"
-                class="form-control border-2"
-                name="filename"
-                x-model="filename"
-                placeholder="e.g., ir_presente"
-              />
-              <span class="input-group-text bg-light border-2">.csv</span>
-            </div>
-          </div>
-
-          <!-- Add this hidden input to ensure the filename is sent during the standard POST -->
-          <input type="hidden" name="filename" :value="filename" />
-
-          <!-- Execution Button -->
-          <div class="d-grid gap-2 mt-5 pt-3">
-            <button
-              type="submit"
-              class="btn btn-primary btn-lg shadow py-3 fw-bold"
-            >
-              <span
-                x-text="multiScrape ? 'Add Selection to Basket' : 'Scrape & Save Result'"
-              ></span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- 2. The Basket Display (Only for Multi-Mode) -->
-    <div class="mt-5" x-show="multiScrape" x-transition>
-      <h5 class="text-muted border-bottom pb-2 fw-bold">
-        Scrape Basket (<span x-text="basket.length"></span> tasks)
-      </h5>
-
-      <!-- Placeholder -->
-      <p
-        class="text-center text-muted small mt-4 py-4 bg-white rounded shadow-sm"
-        x-show="basket.length === 0"
-      >
-        No combinations added to batch yet. Start highlighting above!
-      </p>
-
-      <!-- Task List -->
-      <div class="list-group mt-3">
+    <!-- Batch List -->
+    <section x-show="multiScrape && basket.length > 0" x-transition>
+      <h2 class="h6 fw-bold text-uppercase text-white mb-4">Batch Queue</h2>
+      <div class="list-group mb-4">
         <template x-for="(task, index) in basket" :key="index">
           <div
-            class="list-group-item d-flex justify-content-between align-items-center shadow-sm mb-2 border-start border-primary border-4 rounded px-4"
+            class="list-group-item modern-card border-secondary bg-transparent mb-2 p-3 d-flex justify-content-between align-items-center"
           >
-            <div>
-              <strong x-text="task.verb" class="text-primary fs-5"></strong>
-              <span class="text-muted mx-2">|</span>
+            <div class="text-white">
               <span
-                x-text="task.mode"
-                class="badge bg-light text-dark border"
+                class="fw-bold text-uppercase small"
+                x-text="task.verb"
               ></span>
-              <span class="mx-1">/</span>
               <span
-                x-text="task.tense"
-                class="small fw-bold text-secondary"
+                class="text-muted small ms-2"
+                x-text="task.mode + ' / ' + task.tense"
               ></span>
             </div>
             <div class="btn-group">
               <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="cloneTask(index)"
-                title="Clone to form"
-              >
-                📋
-              </button>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-warning"
                 @click="editTask(index)"
-                title="Edit task"
+                class="btn btn-sm btn-outline-secondary border-0 me-2"
+                aria-label="Edit"
               >
-                ✏️
+                Edit
               </button>
               <button
-                type="button"
-                class="btn btn-sm btn-outline-danger"
                 @click="basket.splice(index, 1)"
+                class="btn btn-sm text-danger text-uppercase fw-bold border-0"
+                aria-label="Remove"
               >
-                &times;
+                Remove
               </button>
             </div>
           </div>
         </template>
       </div>
 
-      <!-- Execute Batch Logic -->
-      <div
-        class="card mt-4 border-success shadow-sm"
-        x-show="basket.length > 0"
-        x-transition
-      >
-        <div class="card-body p-4">
-          <div class="row align-items-center">
-            <div class="col-md-7 mb-3 mb-md-0">
-              <label class="small fw-bold text-success uppercase mb-1 d-block"
-                >Export Filename</label
-              >
-              <div class="input-group">
-                <input
-                  type="text"
-                  class="form-control border-success"
-                  x-model="filename"
-                  placeholder="my_verbs_export"
-                />
-                <span class="input-group-text bg-success text-white">.csv</span>
-              </div>
-            </div>
-            <div class="col-md-5 text-md-end pt-md-3">
-              <button
-                type="button"
-                class="btn btn-success btn-lg w-100 fw-bold shadow-sm"
-                @click="executeBatch()"
-                :disabled="isProcessing"
-              >
-                <!-- Show this when NOT processing -->
-                <span x-show="!isProcessing" x-cloak>
-                  Execute Batch (<span x-text="basket.length"></span>)
-                </span>
-
-                <!-- Show this ONLY when processing -->
-                <span x-show="isProcessing" x-cloak>
-                  <span
-                    class="spinner-border spinner-border-sm me-2"
-                    role="status"
-                  ></span>
-                  Processing...
-                </span>
-              </button>
-            </div>
-          </div>
+      <div class="modern-card p-4 border-primary">
+        <div class="mb-4">
+          <label
+            for="batch-filename"
+            class="form-label small text-uppercase mb-2"
+            >Combined Group Filename</label
+          >
+          <input
+            type="text"
+            id="batch-filename"
+            class="form-control"
+            x-model="filename"
+          />
         </div>
+        <button
+          @click="executeBatch()"
+          :disabled="isProcessing"
+          class="btn btn-primary btn-lg w-100 py-3"
+        >
+          <span x-show="!isProcessing">Process Batch Items</span>
+          <span
+            x-show="isProcessing"
+            class="spinner-border spinner-border-sm"
+            aria-hidden="true"
+          ></span>
+        </button>
       </div>
-    </div>
+    </section>
   </div>
 </div>
-
-<style>
-  .transition-all {
-    transition: all 0.15s ease-in-out;
-  }
-  .uppercase {
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  .btn-outline-secondary {
-    color: #6c757d;
-    border-color: #dee2e6;
-    background-color: white;
-  }
-  .btn-outline-secondary:hover {
-    background-color: #f8f9fa;
-    border-color: #adb5bd;
-    color: #212529;
-  }
-</style>
 
 <script>
   function scrapeComponent() {
@@ -281,12 +222,9 @@
       isProcessing: false,
       basket: [],
       verb: "",
-      filename: "verbs_batch_export",
-
-      // Changed to arrays to support Highlighter Multi-select
+      filename: "verbs_export",
       selectedModes: ["Indicativo"],
       selectedTenses: ["Presente"],
-
       mapping: {
         Indicativo: [
           "Presente",
@@ -298,103 +236,65 @@
         ],
         Subjuntivo: ["Presente", "Pretérito Imperfeito", "Futuro"],
       },
-
-      /**
-       * Returns unique list of tenses based on ALL selected modes.
-       */
       get availableTenses() {
         let tenses = new Set();
         this.selectedModes.forEach((m) => {
-          if (this.mapping[m]) {
-            this.mapping[m].forEach((t) => tenses.add(t));
-          }
+          if (this.mapping[m]) this.mapping[m].forEach((t) => tenses.add(t));
         });
         return Array.from(tenses);
       },
-
-      /**
-       * Toggle Mode logic:
-       * - Single Mode: Exclusive selection (one at a time)
-       * - Multi Mode: Additive selection
-       */
       toggleMode(m) {
         if (!this.multiScrape) {
           this.selectedModes = [m];
         } else {
-          if (this.selectedModes.includes(m)) {
-            if (this.selectedModes.length > 1) {
-              this.selectedModes = this.selectedModes.filter((i) => i !== m);
-            }
-          } else {
-            this.selectedModes.push(m);
-          }
+          this.selectedModes.includes(m)
+            ? this.selectedModes.length > 1 &&
+              (this.selectedModes = this.selectedModes.filter((i) => i !== m))
+            : this.selectedModes.push(m);
         }
-        // Sync tenses to ensure we don't have selected tenses that don't belong to any active mode
         this.selectedTenses = this.selectedTenses.filter((t) =>
           this.availableTenses.includes(t),
         );
       },
-
-      /**
-       * Toggle Tense logic:
-       * - Single Mode: Exclusive selection
-       * - Multi Mode: Additive selection
-       */
       toggleTense(t) {
         if (!this.multiScrape) {
           this.selectedTenses = [t];
         } else {
-          if (this.selectedTenses.includes(t)) {
-            this.selectedTenses = this.selectedTenses.filter((i) => i !== t);
-          } else {
-            this.selectedTenses.push(t);
-          }
+          this.selectedTenses.includes(t)
+            ? (this.selectedTenses = this.selectedTenses.filter((i) => i !== t))
+            : this.selectedTenses.push(t);
         }
       },
-
       toggleAllTenses() {
-        if (this.selectedTenses.length === this.availableTenses.length) {
-          this.selectedTenses = [];
-        } else {
-          this.selectedTenses = [...this.availableTenses];
-        }
+        this.selectedTenses.length === this.availableTenses.length
+          ? (this.selectedTenses = [])
+          : (this.selectedTenses = [...this.availableTenses]);
       },
-
       resetSelections() {
         this.selectedModes = ["Indicativo"];
         this.selectedTenses = ["Presente"];
+        this.filename = this.multiScrape
+          ? "verbs_batch_export"
+          : "verbs_export";
       },
-
       addToBasket() {
         const verbClean = this.verb.trim().toLowerCase();
         if (!verbClean) return;
-
-        if (
-          this.selectedModes.length === 0 ||
-          this.selectedTenses.length === 0
-        ) {
-          alert("Please highlight both a Mode and at least one Tense.");
-          return;
-        }
-
-        // Logic: Cross-Join every selected Mode with every selected Tense
-        // but ONLY if that Tense exists for that Mode in our mapping
         this.selectedModes.forEach((m) => {
           this.selectedTenses.forEach((t) => {
             if (this.mapping[m].includes(t)) {
-              const isDup = this.basket.some(
-                (i) => i.verb === verbClean && i.mode === m && i.tense === t,
-              );
-              if (!isDup) {
+              if (
+                !this.basket.some(
+                  (i) => i.verb === verbClean && i.mode === m && i.tense === t,
+                )
+              ) {
                 this.basket.push({ verb: verbClean, mode: m, tense: t });
               }
             }
           });
         });
-
-        this.verb = ""; // Clear verb to invite next entry
+        this.verb = "";
       },
-
       editTask(index) {
         const task = this.basket[index];
         this.verb = task.verb;
@@ -402,46 +302,26 @@
         this.selectedTenses = [task.tense];
         this.basket.splice(index, 1);
       },
-
-      cloneTask(index) {
-        const task = this.basket[index];
-        this.verb = task.verb;
-        this.selectedModes = [task.mode];
-        this.selectedTenses = [task.tense];
-      },
-
       async executeBatch() {
-        // 1. Guard clause: prevent execution if basket empty or already working
         if (this.basket.length === 0 || this.isProcessing) return;
-
-        // 2. Set loading state
         this.isProcessing = true;
-
-        const payload = {
-          filename: this.filename || "batch_export",
-          tasks: this.basket,
-        };
-
         try {
           const response = await fetch("/batch-scrape", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              filename: this.filename || "batch_export",
+              tasks: this.basket,
+            }),
           });
-
           const result = await response.json();
-
-          if (response.ok) {
-            // Success: Redirect handles the "isProcessing" reset by leaving the page
-            window.location.href = result.redirect_url;
-          } else {
-            // Error: Reset state so user can fix and try again
-            alert("Error: " + (result.error || "Batch execution failed."));
+          if (response.ok) window.location.href = result.redirect_url;
+          else {
+            alert("Error: " + result.error);
             this.isProcessing = false;
           }
         } catch (error) {
-          console.error("Connection Error:", error);
-          alert("Could not connect to the server.");
+          alert("Connection Error");
           this.isProcessing = false;
         }
       },

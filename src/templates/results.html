@@ -1,61 +1,89 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-end mb-4">
-      <div>
-        <h2 class="mb-0">
-          Conjugations for:
-          <span class="text-primary">{{ verb.infinitive }}</span>
-        </h2>
-        <p class="text-muted">{{ mode }} - {{ tense }}</p>
-      </div>
-      <div class="text-end">
-        <div class="bg-light p-2 rounded border mb-2 d-inline-block text-start">
-          <div class="form-check form-switch m-0">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              role="switch"
-              id="skipCheck"
-              checked
-            />
-            <label
-              class="form-check-label fw-bold small"
-              for="skipCheck"
-              style="cursor: pointer"
-            >
-              Skip tu / vós
-            </label>
-          </div>
+  <div class="col-12 col-lg-10 col-xl-8">
+    <!-- Header & Action Section -->
+    <header class="modern-card p-4 mb-4">
+      <div
+        class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-4"
+      >
+        <div>
+          <h1 class="h6 text-muted text-uppercase fw-bold mb-1">
+            Conjugation Results
+          </h1>
+          <h2 class="h1 fw-800 text-white mb-0 text-capitalize">
+            {{ verb.infinitive }}
+          </h2>
+          <p class="text-secondary mb-0">{{ mode }} &mdash; {{ tense }}</p>
         </div>
-        <br />
-        <button onclick="downloadCSV()" class="btn btn-success">
-          Download CSV
-        </button>
-        <a href="/" class="btn btn-outline-secondary ms-2">New Search</a>
-      </div>
-    </div>
 
-    <!-- Table Section -->
-    <div class="card shadow">
+        <nav class="d-flex flex-wrap gap-2" aria-label="Results actions">
+          <button
+            onclick="downloadCSV()"
+            class="btn btn-primary flex-grow-1 px-4"
+          >
+            Download CSV
+          </button>
+          <a href="/" class="btn btn-outline-secondary flex-grow-1 px-4">
+            New Search
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Filters Section -->
+    <section
+      class="modern-card p-3 mb-4 d-flex align-items-center justify-content-between"
+      aria-label="Display filters"
+    >
+      <span class="small fw-bold text-uppercase text-muted"
+        >Filter Options</span
+      >
+      <div class="form-check form-switch m-0 p-0">
+        <label
+          class="form-check-label small fw-bold text-white me-5"
+          for="skipCheck"
+          >Skip tu / vós</label
+        >
+        <input
+          class="form-check-input ms-0"
+          type="checkbox"
+          role="switch"
+          id="skipCheck"
+          checked
+        />
+      </div>
+    </section>
+
+    <!-- Conjugations Table -->
+    <section class="modern-card overflow-hidden">
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead class="table-light">
+        <table
+          class="table table-dark table-hover mb-0"
+          style="--bs-table-bg: transparent"
+        >
+          <thead class="border-bottom border-secondary">
             <tr>
-              <th>Person</th>
-              <th>Conjugation</th>
+              <th scope="col" class="ps-4 py-3 text-muted small text-uppercase">
+                Person
+              </th>
+              <th scope="col" class="pe-4 py-3 text-muted small text-uppercase">
+                Conjugation
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="align-middle">
             {% for conj in conjugations %}
             <tr>
-              <td class="text-muted italic">{{ conj.person.name }}</td>
-              <td class="fw-bold">{{ conj.value }}</td>
+              <td class="ps-4 py-3 text-muted italic">
+                {{ conj.person.name }}
+              </td>
+              <td class="pe-4 py-3 fw-bold text-white fs-5">
+                {{ conj.value }}
+              </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="2" class="text-center">
+              <td colspan="2" class="text-center py-5 text-muted">
                 No results found for this specific mode/tense.
               </td>
             </tr>
@@ -63,36 +91,21 @@
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
 </div>
 
-<!-- JavaScript logic at the bottom of the content block -->
 <script>
   function downloadCSV() {
-    console.log("Download triggered...");
     const skip = document.getElementById("skipCheck").checked;
-
-    // Get the filename passed from the Flask route
     const customFilename = "{{ filename | safe }}";
-
-    // Construct the base URL using Jinja2
-    // url_for generates a path like "/export/comer?mode=Indicativo&tense=Presente"
     const basePath =
       "{{ url_for('main.export_csv', verb_infinitive=verb.infinitive, mode=mode, tense=tense) }}";
-
-    // Use the built-in URL API to handle parameters safely
     const url = new URL(basePath, window.location.origin);
 
-    if (skip) {
-      url.searchParams.append("skip_tu_vos", "true");
-    }
+    if (skip) url.searchParams.append("skip_tu_vos", "true");
+    if (customFilename) url.searchParams.append("filename", customFilename);
 
-    if (customFilename) {
-      url.searchParams.append("filename", customFilename);
-    }
-
-    console.log("Redirecting to:", url.href);
     window.location.href = url.href;
   }
 </script>

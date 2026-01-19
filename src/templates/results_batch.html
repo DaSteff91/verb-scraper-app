@@ -1,64 +1,82 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-10">
-    <!-- 1. HIDDEN DATA CONTAINER (The No-Guessing Fix) -->
-    <div id="tasks-json-storage" style="display: none">
+  <div class="col-12 col-lg-10">
+    <!-- Hidden JSON Data Container (Required for logic) -->
+    <div id="tasks-json-storage" style="display: none" aria-hidden="true">
       {{ tasks_json | safe }}
     </div>
 
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-end mb-4">
-      <div>
-        <h2 class="mb-0">Batch Scrape Results</h2>
-        <p class="text-muted">
-          Review your collection before exporting to Anki.
-        </p>
-      </div>
-      <div class="text-end">
-        <div class="bg-light p-2 rounded border mb-2 d-inline-block text-start">
-          <div class="form-check form-switch m-0">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              role="switch"
-              id="skipCheck"
-              checked
-            />
-            <label
-              class="form-check-label fw-bold small"
-              for="skipCheck"
-              style="cursor: pointer"
-            >
-              Skip tu / vós (All)
-            </label>
-          </div>
+    <!-- Header -->
+    <header class="modern-card p-4 mb-4">
+      <div
+        class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-4"
+      >
+        <div>
+          <h1 class="h2 fw-800 text-white mb-1">Batch Scrape Summary</h1>
+          <p class="text-muted mb-0">
+            Review your collection before exporting to CSV.
+          </p>
         </div>
-        <br />
-        <button
-          onclick="downloadBatchCSV()"
-          class="btn btn-success fw-bold px-4"
-        >
-          Download Combined CSV
-        </button>
-        <a href="/" class="btn btn-outline-secondary ms-2">New Scrape</a>
-      </div>
-    </div>
 
-    <!-- Grouped Results Accordion -->
-    <div class="accordion shadow-sm" id="batchAccordion">
+        <nav class="d-flex flex-wrap gap-2">
+          <button
+            onclick="downloadBatchCSV()"
+            class="btn btn-primary flex-grow-1 px-4 fw-bold"
+          >
+            Download Combined CSV
+          </button>
+          <a href="/" class="btn btn-outline-secondary flex-grow-1 px-4"
+            >New Scrape</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <!-- Batch Controls -->
+    <section
+      class="modern-card p-3 mb-4 d-flex align-items-center justify-content-between"
+    >
+      <span class="small fw-bold text-uppercase text-muted"
+        >Global Settings</span
+      >
+      <div class="form-check form-switch m-0 p-0">
+        <label
+          class="form-check-label small fw-bold text-white me-5"
+          for="skipCheck"
+          >Skip tu / vós (All)</label
+        >
+        <input
+          class="form-check-input ms-0"
+          type="checkbox"
+          role="switch"
+          id="skipCheck"
+          checked
+        />
+      </div>
+    </section>
+
+    <!-- Grouped Results -->
+    <section class="accordion" id="batchAccordion">
       {% for item in batch %}
-      <div class="accordion-item">
+      <article class="accordion-item modern-card mb-3 border-0 overflow-hidden">
         <h2 class="accordion-header">
           <button
-            class="accordion-button collapsed"
+            class="accordion-button collapsed bg-transparent text-white py-4"
             type="button"
             data-bs-toggle="collapse"
             data-bs-target="#collapse-{{ loop.index }}"
+            aria-expanded="false"
           >
-            <strong class="text-primary fs-5">{{ item.verb }}</strong>
-            <span class="text-muted ms-3 small"
-              >Mode: {{ item.mode }} | Tense: {{ item.tense }}</span
-            >
+            <div class="d-flex flex-column align-items-start">
+              <strong
+                class="text-uppercase ls-wide"
+                style="color: var(--primary-accent)"
+                >{{ item.verb }}</strong
+              >
+              <span class="text-muted small"
+                >{{ item.mode }} | {{ item.tense }}</span
+              >
+            </div>
           </button>
         </h2>
         <div
@@ -66,65 +84,53 @@
           class="accordion-collapse collapse"
           data-bs-parent="#batchAccordion"
         >
-          <div class="accordion-body bg-light-subtle">
-            <table class="table table-hover table-sm mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 30%">Person</th>
-                  <th>Conjugation</th>
-                </tr>
-              </thead>
+          <div
+            class="accordion-body border-top border-secondary border-opacity-25 p-0"
+          >
+            <table
+              class="table table-dark table-sm mb-0"
+              style="--bs-table-bg: transparent"
+            >
               <tbody>
                 {% for conj in item.conjugations %}
                 <tr>
-                  <td class="text-muted italic small">
+                  <td class="ps-4 py-2 text-muted small" style="width: 35%">
                     {{ conj.person.name }}
                   </td>
-                  <td class="fw-bold">{{ conj.value }}</td>
+                  <td class="pe-4 py-2 fw-bold text-white">{{ conj.value }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
+      </article>
       {% else %}
-      <div class="alert alert-info text-center">
+      <div class="modern-card p-5 text-center text-muted">
         No verbs found in the database for this batch.
       </div>
       {% endfor %}
-    </div>
+    </section>
   </div>
 </div>
 
 <script>
-  /**
-   * Safe Batch Export using the Hidden Data Container
-   */
   function downloadBatchCSV() {
-    console.log("Preparing Download...");
-
-    // Read the JSON directly from the hidden DIV content
     const rawData = document.getElementById("tasks-json-storage").textContent;
-
     try {
       const tasks = JSON.parse(rawData);
       const filename = "{{ filename }}";
       const skip = document.getElementById("skipCheck").checked;
-
       const basePath = "{{ url_for('main.export_batch_csv') | safe }}";
       const url = new URL(basePath, window.location.origin);
 
       url.searchParams.append("tasks", JSON.stringify(tasks));
       url.searchParams.append("filename", filename);
-      if (skip) {
-        url.searchParams.append("skip_tu_vos", "true");
-      }
+      if (skip) url.searchParams.append("skip_tu_vos", "true");
 
       window.location.href = url.href;
     } catch (e) {
-      console.error("Failed to parse batch data:", e);
-      alert("Could not process the batch data for download.");
+      console.error("Batch Export Failed:", e);
     }
   }
 </script>

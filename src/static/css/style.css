@@ -1,0 +1,124 @@
+:root {
+  /* High-Contrast Material Dark Palette */
+  --bg-main: #121212;
+  --bg-surface: #1e1e1e;
+  --bg-input: #2d2d2d; /* Slightly lighter for depth */
+  --primary-accent: #4db6ac; /* Brightened Teal for contrast */
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #b0bec5; /* Significantly brighter for readability */
+  --border-active: #546e7a;
+  --border-idle: #37474f;
+  --radius: 4px;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-secondary);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.6;
+}
+
+.navbar-brand {
+  color: #ffffff !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+}
+
+/* Typography Contrast Fixes */
+.form-label,
+legend {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+}
+
+/* Prevent legend from forcing a line break in flex containers */
+fieldset legend {
+  float: none;
+  width: auto;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+/* Prevent legend from forcing a line break in flex containers */
+fieldset legend {
+  float: none;
+  width: auto;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.text-nowrap {
+  white-space: nowrap !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Input & Input Group Fixes */
+.form-control {
+  background-color: var(--bg-input) !important;
+  border: 1px solid var(--border-idle) !important;
+  color: var(--text-primary) !important;
+}
+
+.form-control::placeholder {
+  color: #757575;
+}
+
+/* Fix for the ".csv" label in input groups */
+.input-group-text {
+  background-color: #263238 !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-idle) !important;
+}
+
+/* High-Contrast Switch/Toggle */
+.form-check-input {
+  background-color: #455a64;
+  border: 2px solid var(--border-active);
+  cursor: pointer;
+  height: 1.5em;
+  width: 3em;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-accent);
+  border-color: var(--text-primary);
+}
+
+/* Button Contrast */
+.btn-pill {
+  min-height: 48px;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: 2px solid transparent;
+}
+
+.btn-primary {
+  background-color: var(--primary-accent);
+  color: #000000; /* Max contrast on teal */
+}
+
+.btn-outline-secondary {
+  border: 2px solid var(--border-active);
+  color: var(--text-primary);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--bg-input);
+  border-color: var(--text-primary);
+}
+
+.modern-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-idle);
+  border-radius: var(--radius);
+}
