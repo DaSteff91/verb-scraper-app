@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SECRET_KEY: "ci-testing-key-not-for-production"
+      API_KEY: "ci-mock-key"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,10 +27,10 @@ jobs:
           pip install pytest pytest-flask pytest-cov requests-mock
 
       - name: Run Pytest
-        # We run all tests, including the 'online' contract tests
         run: pytest
         # SETTING: Change this to 'false' to block the build if tests fail
         continue-on-error: true
+
   versioning:
     name: Running Python Semantic Release
     permissions:
@@ -183,4 +184,4 @@ jobs:
         env:
           TEST_API_URL: "https://conjugator.kite-engineer.de"
           TEST_API_KEY: "${{ secrets.API_KEY }}"
-        run: pytest tests/remote/
+        run: pytest -c /dev/null tests/remote/
