@@ -2,6 +2,16 @@
 
 <!-- version list -->
 
+## v1.15.2 (2026-01-19)
+
+### Bug Fixes
+
+-
+  **direct-fix-in-main-to-fix-0s-Run-pytest--c-/dev/null-tests/remote/-ImportError-while-loading-conftest-'/home/runner/work/verb-scraper-app/verb-scraper-app/tests/conftest.py'.-tests/conftest.py:12:-in-<module>-from-flask-import-Flask-E-ModuleNotFoundError:-No-module-named-'flask'-Error:-Process-completed-with-exit-code-4.**:
+  Adding Pytest Discovery Anchoring
+  ([`8941efe`](https://github.com/DaSteff91/verb-scraper-app/commit/8941efe7f9850e7c925067482db7dada1b1d22a4))
+
+
 ## v1.15.1 (2026-01-19)
 
 ### Bug Fixes
