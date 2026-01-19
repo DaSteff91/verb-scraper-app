@@ -2,6 +2,16 @@
 
 <!-- version list -->
 
+## v1.15.1 (2026-01-19)
+
+### Bug Fixes
+
+-
+  **--The-API_KEY-line-allows-your-internal-logic-tests-to-boot-the-app-without-crashing-on-the-security-check.---The--c-/dev/null-flag-makes-the-smoke-test-truly-"headless"-and-decoupled,-ensuring-it-only-uses-the-dependencies-installed-in-that-job-(pytest-and-requests),-ignoring-the-root-conftest.py.**:
+  Fixing cicd issue
+  ([`b47e9f3`](https://github.com/DaSteff91/verb-scraper-app/commit/b47e9f36a8898eebb1383a5e2dcc6381e7271a6d))
+
+
 ## v1.15.0 (2026-01-19)
 
 ### Bug Fixes
