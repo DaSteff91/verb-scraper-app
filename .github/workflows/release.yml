@@ -162,3 +162,25 @@ jobs:
 
             # Cleanup old images to save disk space
             docker image prune -f
+
+  smoke-test:
+    name: Post-Deployment Smoke Test
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Pytest & Requests
+        run: pip install pytest requests
+
+      - name: Run Remote Contract Tests
+        env:
+          TEST_API_URL: "https://conjugator.kite-engineer.de"
+          TEST_API_KEY: "${{ secrets.API_KEY }}"
+        run: pytest tests/remote/
