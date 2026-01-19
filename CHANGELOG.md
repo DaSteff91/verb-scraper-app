@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.15.3 (2026-01-19)
+
+### Bug Fixes
+
+- **adding-new-favicon**: More contrast and different style
+  ([`0f85f36`](https://github.com/DaSteff91/verb-scraper-app/commit/0f85f365615465cc8bd56e6b105d3ae27220dae8))
+
+
 ## v1.15.2 (2026-01-19)
 
 ### Bug Fixes
