@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.14.0 (2026-01-19)
+
+### Features
+
+- **making-sure-the-db-is-pre-seeded-for-both,-testing-and-ensuring-functionality-upon-starting**:
+  Implement idempotent database seeding for health checks and testing
+  ([`3b2d2f7`](https://github.com/DaSteff91/verb-scraper-app/commit/3b2d2f7040ab659775a1c426942f10524eb7a8b0))
+
+
 ## v1.13.0 (2026-01-19)
 
 ### Bug Fixes
