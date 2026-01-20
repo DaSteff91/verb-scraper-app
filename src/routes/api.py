@@ -4,6 +4,10 @@ API v1 Routes.
 Provides JSON endpoints for searching and scraping verbs.
 """
 
+from datetime import UTC, datetime
+import os
+from pathlib import Path
+from sqlalchemy import text
 import logging
 import threading
 from typing import Any, Dict, List, Optional, Union, cast
@@ -290,3 +294,64 @@ def handle_api_exception(e: Exception) -> tuple[WerkzeugResponse, int]:
         }
     )
     return response, 500
+
+
+@api_bp.route("/health", methods=["GET"])
+def health_check() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+    """
+    Deep diagnostic health check.
+
+    Verifies database connectivity, readiness (seeding), and
+    filesystem write permissions. Restricted to localhost only.
+    """
+    # 1. Security: Only allow internal Docker probes
+    # Note: request.remote_addr is '127.0.0.1' when called from within the container
+    if request.remote_addr != "127.0.0.1":
+        logger.warning(
+            "External health check attempt blocked from: %s", request.remote_addr
+        )
+        return jsonify({"error": "Forbidden"}), 403
+
+    health_report: Dict[str, Any] = {
+        "status": "healthy",
+        "timestamp": datetime.now(UTC).timestamp(),
+        "checks": {"database": "fail", "storage": "fail", "readiness": "fail"},
+    }
+    is_healthy = True
+
+    try:
+        # 2. Database Check: Can we talk to the DB?
+        db.session.execute(text("SELECT 1"))
+        health_report["checks"]["database"] = "ok"
+
+        # 3. Readiness Check: Has the seeder finished?
+        verb = Verb.query.filter_by(infinitive="comer").first()
+        if verb:
+            health_report["checks"]["readiness"] = "ok"
+        else:
+            is_healthy = False
+            logger.warning("Health Check: System not yet seeded.")
+
+    except Exception as e:
+        is_healthy = False
+        health_report["checks"]["database"] = f"error: {str(e)}"
+        logger.error("Health Check: Database failure: %s", e)
+
+    try:
+        # 4. Storage Check: Is the instance folder writable?
+        # We try to touch a hidden file in the instance folder
+        instance_path = Path(current_app.config["INSTANCE_PATH"])
+        test_file = instance_path / ".health_test"
+        test_file.touch()
+        test_file.unlink()  # Delete after success
+        health_report["checks"]["storage"] = "ok"
+    except Exception as e:
+        is_healthy = False
+        health_report["checks"]["storage"] = f"error: {str(e)}"
+        logger.error("Health Check: Storage write failure: %s", e)
+
+    if not is_healthy:
+        health_report["status"] = "unhealthy"
+        return jsonify(health_report), 503
+
+    return jsonify(health_report), 200

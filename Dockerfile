@@ -25,7 +25,9 @@ COPY . .
 RUN mkdir -p /app/instance && chmod 777 /app/instance
 
 # 8. Create a non-privileged user for security
+
 RUN adduser --disabled-password --gecos "" appuser
+RUN chmod +x /app/healthcheck.py
 USER appuser
 
 # 9. Expose the port
