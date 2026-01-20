@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.16.2 (2026-01-20)
+
+### Bug Fixes
+
+- **adding-the-healthcheck-to-the-dockerfile**: Was forgotten previously
+  ([`0b31f04`](https://github.com/DaSteff91/verb-scraper-app/commit/0b31f044a504e49c18b3b9a9d666da842d9530dd))
+
+
 ## v1.16.1 (2026-01-20)
 
 ### Bug Fixes
