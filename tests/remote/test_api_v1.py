@@ -104,7 +104,7 @@ def test_api_batch_async_flow(
     url_batch = f"{api_config['v1_prefix']}/batch"
     payload = {
         "tasks": [
-            {"verb": "amar", "mode": "Indicativo", "tense": "Presente"},
+            {"verb": "ir", "mode": "Subjuntivo", "tense": "Presente"},
             {"verb": "falar", "mode": "Indicativo", "tense": "Presente"},
         ]
     }

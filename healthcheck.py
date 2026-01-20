@@ -16,7 +16,7 @@ def check_health() -> NoReturn:
     is healthy (200 OK), otherwise exits with code 1 to signal an
     unhealthy state to the Docker engine.
     """
-    url: str = "http://localhost:5050/api/v1/health"
+    url: str = "http://127.0.0.1:5050/api/v1/health"
     timeout: int = 5
 
     try:

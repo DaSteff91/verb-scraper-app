@@ -304,9 +304,13 @@ def health_check() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     Verifies database connectivity, readiness (seeding), and
     filesystem write permissions. Restricted to localhost only.
     """
-    # 1. Security: Only allow internal Docker probes
-    # Note: request.remote_addr is '127.0.0.1' when called from within the container
-    if request.remote_addr != "127.0.0.1":
+    # 1. Security: Allow internal loopback and the Docker bridge gateway
+    # 127.0.0.1 = Standard Loopback
+    # 172.17.0.1 = Standard Docker Bridge Gateway
+    # ::1 = IPv6 Loopback
+    allowed_ips = ["127.0.0.1", "::1", "172.17.0.1"]
+
+    if request.remote_addr not in allowed_ips:
         logger.warning(
             "External health check attempt blocked from: %s", request.remote_addr
         )
