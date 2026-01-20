@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.16.0 (2026-01-20)
+
+### Features
+
+- **implement-deep-diagnostic-Docker-health-check-system**: - Created /api/v1/health endpoint
+  verifying database, storage, and seeder status.
+  ([`7d07b19`](https://github.com/DaSteff91/verb-scraper-app/commit/7d07b195d559c501d3ad9c256baa92f5c2204435))
+
+
 ## v1.15.3 (2026-01-19)
 
 ### Bug Fixes
