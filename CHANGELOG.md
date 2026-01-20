@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.16.1 (2026-01-20)
+
+### Bug Fixes
+
+- **fixing-the-healthckech-whitelist**: Adding new allowed ip addresses from the docker bridge to
+  access the healthcheck status
+  ([`4a1d9df`](https://github.com/DaSteff91/verb-scraper-app/commit/4a1d9df6dc419dc06b1d5083b2f76ddf745d7428))
+
+
 ## v1.16.0 (2026-01-20)
 
 ### Features
