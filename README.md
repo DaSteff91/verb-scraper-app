@@ -2,7 +2,6 @@
 
 ![CI/CD Status](https://github.com/DaSteff91/verb-scraper-app/actions/workflows/release.yml/badge.svg)
 [![Latest Release](https://img.shields.io/github/v/release/DaSteff91/verb-scraper-app)](https://github.com/DaSteff91/verb-scraper-app/releases)
-[![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/DaSteff91/verb-scraper-app)
 ![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/DaSteff91/6b9d36ea3da77d9064471310bdf46ec7/raw/coverage.json)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Author: Kite-Engineer](https://img.shields.io/badge/author-Kite--Engineer-orange)](https://www.kite-engineer.de)
