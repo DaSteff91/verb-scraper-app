@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.17.2 (2026-01-21)
+
+### Bug Fixes
+
+- **.coverage-file-is-not-needed**: Delete and .gitignored for the future
+  ([`33e663d`](https://github.com/DaSteff91/verb-scraper-app/commit/33e663d7c7e4a4a3016f592ce540525490d6043e))
+
+- **resolve-seeding-crash-on-fresh-installations**: - Add db.session.flush() to ensure primary key
+  resolution during seeding
+  ([`f569017`](https://github.com/DaSteff91/verb-scraper-app/commit/f56901752ada3120a389d0a6b9e1bc55cfce1023))
+
+### Testing
+
+- **implement-security-hardening-and-scraper-resilience-suites**: - Adds unauthorized access
+  verification for API Key decorator
+  ([`8e43d3d`](https://github.com/DaSteff91/verb-scraper-app/commit/8e43d3d99ade9ea1015c9e2d914995d1dfcf20dd))
+
+
 ## v1.17.1 (2026-01-21)
 
 ### Bug Fixes
