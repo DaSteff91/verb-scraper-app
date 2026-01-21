@@ -29,7 +29,7 @@ jobs:
       - name: Run Pytest
         run: pytest
         # SETTING: Change this to 'false' to block the build if tests fail
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Extract Coverage Percentage
         id: extract_coverage
