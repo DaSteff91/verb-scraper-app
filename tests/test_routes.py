@@ -13,7 +13,7 @@ def test_index_route_get(client: FlaskClient) -> None:
     """Verify the home page loads correctly."""
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Conjugate Verb" in response.data
+    assert b"Portuguese Infinitive" in response.data
 
 
 def test_scrape_form_submission_success(
@@ -33,7 +33,7 @@ def test_scrape_form_submission_success(
 
     # Check that we landed on the results page
     assert response.status_code == 200
-    assert b"Conjugations for:" in response.data
+    assert b"Conjugation Results" in response.data
     assert b"falar" in response.data
     assert b"eu falo" in response.data
 
@@ -93,7 +93,7 @@ def test_scrape_form_failure_handling(
 
     assert response.status_code == 200
     # FIX: We look for the partial string to avoid HTML entity escaping issues (&#39;)
-    assert b"Could not find or scrape the verb" in response.data
+    assert b"Could not find the verb" in response.data
     assert b"badverb" in response.data
 
 
@@ -118,11 +118,11 @@ def test_scrape_form_validation_error_feedback(client: FlaskClient) -> None:
         follow_redirects=True,
     )
 
-    # 2. Check that we didn't redirect to results (stayed on index)
+    # 2. Check that we didn't redirect to results
     assert response.status_code == 200
 
     # 3. Check for the specific Flash Message in the HTML
     assert b"Invalid verb format" in response.data
 
-    # 4. Verify it has the Bootstrap 'alert-danger' class (the red box)
-    assert b"alert-danger" in response.data
+    # 4. Verify it has the Bootstrap 'alert-dark' class
+    assert b"alert-dark" in response.data
