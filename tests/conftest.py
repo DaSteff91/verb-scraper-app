@@ -5,6 +5,7 @@ This module defines the fixtures required for testing the Flask application,
 including the app instance, database setup, mock data loaders and a deployed instance of the Verb Scraper API.
 """
 
+import os
 from pathlib import Path
 from typing import Generator, Dict
 
