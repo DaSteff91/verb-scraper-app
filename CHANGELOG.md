@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.17.1 (2026-01-21)
+
+### Bug Fixes
+
+- **remove-the-doubled-bade**: Selfexplaining
+  ([`c4daaff`](https://github.com/DaSteff91/verb-scraper-app/commit/c4daafff723c5b64a8e0eecb37d88c8761fb3069))
+
+
 ## v1.17.0 (2026-01-21)
 
 ### Bug Fixes
