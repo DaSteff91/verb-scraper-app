@@ -18,8 +18,8 @@ from flask import current_app
 from src.extensions import db
 from src.models.verb import BatchJob, Conjugation, Mode, Person, Tense, Verb
 from src.services.scraper import ConjugacaoScraper
+from src.services.backup_scraper import CooljugatorScraper
 
-# Initialize logger
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +30,8 @@ class VerbManager:
 
     def __init__(self) -> None:
         """Initialize the service with its scraper and person mappings."""
-        self.scraper: ConjugacaoScraper = ConjugacaoScraper()
+        self.primary_scraper: ConjugacaoScraper = ConjugacaoScraper()
+        self.backup_scraper: CooljugatorScraper = CooljugatorScraper()
         self.person_names: List[str] = [
             "eu",
             "tu",
@@ -44,7 +45,10 @@ class VerbManager:
         self, verb_infinitive: str, mode_name: str, tense_name: str
     ) -> bool:
         """
-        Coordinates scraping a verb and saving it to the 5NF database.
+        Coordinates scraping from multiple sources and saves to the database.
+
+        Attempts the primary scraper first. If it returns no data, attempts
+         the backup scraper before failing.
 
         Args:
             verb_infinitive: The infinitive form of the verb.
@@ -61,19 +65,32 @@ class VerbManager:
             tense_name,
         )
 
-        # 1. Scrape the raw data
-        forms: Optional[List[str]] = self.scraper.get_conjugations(
+        # 1. Attempt Primary Source
+        forms: Optional[List[str]] = self.primary_scraper.get_conjugations(
             verb_infinitive, mode_name, tense_name
         )
 
+        # 2. Failover to Backup Source if primary yields no results
+        if not forms:
+            logger.warning(
+                "Primary source failed for %s. Attempting backup source...",
+                verb_infinitive,
+            )
+            forms = self.backup_scraper.get_conjugations(
+                verb_infinitive, mode_name, tense_name
+            )
+
         if not forms:
             logger.error(
-                "No data found for %s (%s %s)", verb_infinitive, mode_name, tense_name
+                "All sources failed for %s (%s %s)",
+                verb_infinitive,
+                mode_name,
+                tense_name,
             )
             return False
 
         try:
-            # 2. Get or Create Verb (with extra safety for multi-threading)
+            # 3. Get or Create Verb
             verb = Verb.query.filter_by(infinitive=verb_infinitive).first()  # type: ignore
             if not verb:
                 try:
@@ -89,14 +106,14 @@ class VerbManager:
                         "Verb %s was created by another thread.", verb_infinitive
                     )
 
-            # 3. Get or Create Mode
+            # 4. Get or Create Mode
             mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore
             if not mode:
                 mode = Mode(name=mode_name)
                 db.session.add(mode)
                 db.session.flush()
 
-            # 4. Get or Create Tense (linked to Mode)
+            # 5. Get or Create Tense (linked to Mode)
             tense = Tense.query.filter_by(name=tense_name, mode=mode).first()  # type: ignore
             if not tense:
                 tense = Tense(name=tense_name, mode=mode)
@@ -104,7 +121,7 @@ class VerbManager:
 
             db.session.flush()
 
-            # 5. Handle person mapping and offsets
+            # 6. Handle person mapping and offsets
             offset: int = 0
             if len(forms) == 5 and mode_name == "Imperativo":
                 offset = 1
