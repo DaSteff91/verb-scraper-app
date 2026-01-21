@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.17.3 (2026-01-21)
+
+### Bug Fixes
+
+- **due-to-an-early-rollback-of-versions-in-another-branch-some-real-fixes-were-also-rolled-back**:
+  Re-implementation
+  ([`de24813`](https://github.com/DaSteff91/verb-scraper-app/commit/de24813d58bf703571e5793c88219cdf14057a78))
+
+
 ## v1.17.2 (2026-01-21)
 
 ### Bug Fixes
