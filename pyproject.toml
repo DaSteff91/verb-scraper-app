@@ -10,7 +10,7 @@ ignore_missing_imports = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.18.0"
+version = "1.19.0"
 tag_format = "v$version"
 version_files = [
     "src/__init__.py",

@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.19.0 (2026-01-21)
+
+### Features
+
+- **add-Cooljugator-backup-source-and-failover-logic**: - Implement BaseScraper interface to
+  standardize provider contracts
+  ([`5333723`](https://github.com/DaSteff91/verb-scraper-app/commit/533372321b0887a0427a0fa3a7efa63e3062c6a0))
+
+
 ## v1.18.0 (2026-01-21)
 
 ### Bug Fixes
