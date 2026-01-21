@@ -22,3 +22,4 @@ instance/
 dist/
 build/
 *.egg-info/
+.coverage

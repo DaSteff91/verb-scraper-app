@@ -5,15 +5,19 @@ This module simulates user interaction with the web interface to verify
 routing and template rendering.
 """
 
+import time
 from flask.testing import FlaskClient
+from typing import Dict, Any
 import requests_mock
+from src.models.verb import BatchJob
+from src.extensions import db
 
 
 def test_index_route_get(client: FlaskClient) -> None:
     """Verify the home page loads correctly."""
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Conjugate Verb" in response.data
+    assert b"Portuguese Infinitive" in response.data
 
 
 def test_scrape_form_submission_success(
@@ -33,7 +37,7 @@ def test_scrape_form_submission_success(
 
     # Check that we landed on the results page
     assert response.status_code == 200
-    assert b"Conjugations for:" in response.data
+    assert b"Conjugation Results" in response.data
     assert b"falar" in response.data
     assert b"eu falo" in response.data
 
@@ -93,7 +97,7 @@ def test_scrape_form_failure_handling(
 
     assert response.status_code == 200
     # FIX: We look for the partial string to avoid HTML entity escaping issues (&#39;)
-    assert b"Could not find or scrape the verb" in response.data
+    assert b"Could not find the verb" in response.data
     assert b"badverb" in response.data
 
 
@@ -118,11 +122,75 @@ def test_scrape_form_validation_error_feedback(client: FlaskClient) -> None:
         follow_redirects=True,
     )
 
-    # 2. Check that we didn't redirect to results (stayed on index)
+    # 2. Check that we didn't redirect to results
     assert response.status_code == 200
 
     # 3. Check for the specific Flash Message in the HTML
     assert b"Invalid verb format" in response.data
 
-    # 4. Verify it has the Bootstrap 'alert-danger' class (the red box)
-    assert b"alert-danger" in response.data
+    # 4. Verify it has the Bootstrap 'alert-dark' class
+    assert b"alert-dark" in response.data
+
+
+def test_api_batch_full_lifecycle(
+    client: FlaskClient, app: Any, requests_mock: Any, sample_html: Any
+) -> None:
+    """
+    Verify the complete asynchronous lifecycle: Trigger -> Poll -> Complete.
+
+    This test ensures:
+    1. The POST request starts the job (202).
+    2. The GET request returns the current progress (200).
+    3. The background thread completes even in a test environment.
+    """
+    # 1. Setup Mocks and Payload
+    api_key: str = app.config["API_KEY"]
+    headers: Dict[str, str] = {"X-API-KEY": api_key}
+
+    # We use a real scraper URL mock to ensure the thread has work to do
+    mock_url = "https://www.conjugacao.com.br/verbo-falar/"
+    requests_mock.get(mock_url, text=sample_html("falar.html"))
+
+    payload = {"tasks": [{"verb": "falar", "mode": "Indicativo", "tense": "Presente"}]}
+
+    # 2. Execution: Start the Job
+    post_resp = client.post("/api/v1/batch", json=payload, headers=headers)
+    assert post_resp.status_code == 202
+    job_id: str = post_resp.get_json()["job_id"]
+
+    # 3. Execution: Poll the status until completed
+    # This loop prevents the "no such table" error by keeping the test
+    # (and the :memory: database) alive until the thread finishes.
+    max_retries = 10
+    finished = False
+
+    for _ in range(max_retries):
+        get_resp = client.get(f"/api/v1/batch/{job_id}", headers=headers)
+        assert get_resp.status_code == 200
+
+        data = get_resp.get_json()
+        if data["status"] == "completed":
+            finished = True
+            break
+
+        time.sleep(0.5)  # Wait for the thread to process
+
+    # 4. Final Assertions
+    assert finished is True
+    assert data["progress"]["success"] == 1
+
+    # Verify persistence check
+    with app.app_context():
+        from src.models.verb import Verb
+
+        assert Verb.query.filter_by(infinitive="falar").first() is not None
+
+
+def test_api_batch_status_not_found(client: FlaskClient, app: Any) -> None:
+    """Verify that polling a non-existent UUID returns a 404."""
+    api_key: str = app.config["API_KEY"]
+    headers: Dict[str, str] = {"X-API-KEY": api_key}
+
+    response = client.get("/api/v1/batch/invalid-uuid", headers=headers)
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Job not found"

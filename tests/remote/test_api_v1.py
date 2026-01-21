@@ -8,8 +8,16 @@ format integrity, and asynchronous job workflows.
 import requests
 from typing import Dict
 import time
+import os
+import pytest
+
+REMOTE_TESTS_ENABLED = os.getenv("TEST_API_KEY") is not None
 
 
+@pytest.mark.skipif(
+    not REMOTE_TESTS_ENABLED,
+    reason="Remote API tests require TEST_API_KEY environment variable",
+)
 def test_api_security_gatekeeper(
     api_config: Dict[str, str], auth_header: Dict[str, str]
 ) -> None:
@@ -30,6 +38,10 @@ def test_api_security_gatekeeper(
     assert "infinitive" in response_success.json()
 
 
+@pytest.mark.skipif(
+    not REMOTE_TESTS_ENABLED,
+    reason="Remote API tests require TEST_API_KEY environment variable",
+)
 def test_api_error_handler_safety_net(
     api_config: Dict[str, str], auth_header: Dict[str, str]
 ) -> None:
@@ -47,6 +59,10 @@ def test_api_error_handler_safety_net(
     assert data["status_code"] == 404
 
 
+@pytest.mark.skipif(
+    not REMOTE_TESTS_ENABLED,
+    reason="Remote API tests require TEST_API_KEY environment variable",
+)
 def test_api_dialect_and_anki_snapshot(
     api_config: Dict[str, str], auth_header: Dict[str, str]
 ) -> None:
@@ -94,6 +110,10 @@ def test_api_dialect_and_anki_snapshot(
     )
 
 
+@pytest.mark.skipif(
+    not REMOTE_TESTS_ENABLED,
+    reason="Remote API tests require TEST_API_KEY environment variable",
+)
 def test_api_batch_async_flow(
     api_config: Dict[str, str], auth_header: Dict[str, str]
 ) -> None:

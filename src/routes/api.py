@@ -257,7 +257,7 @@ def get_batch_status(
     @require_api_key
     def handle_request() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
         logger.debug("Checking status for Job [%s]", job_id)
-        job = BatchJob.query.get(job_id)
+        job = db.session.get(BatchJob, job_id)
 
         if not job:
             logger.warning("Status check failed: Job [%s] not found.", job_id)
