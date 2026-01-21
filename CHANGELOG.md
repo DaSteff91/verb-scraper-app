@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.16.4 (2026-01-21)
+
+### Bug Fixes
+
+- **updating-the-README-to-have-a-more-actual-version**: Changed some md lines
+  ([`b6c7642`](https://github.com/DaSteff91/verb-scraper-app/commit/b6c76420d3661cb74e5d03a61e4d942ce4bcf2e3))
+
+
 ## v1.16.3 (2026-01-21)
 
 ### Bug Fixes
