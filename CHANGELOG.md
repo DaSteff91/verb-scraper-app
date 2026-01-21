@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.20.0 (2026-01-21)
+
+### Features
+
+- **scraping**: Implement dual-source failover system with live contract tests
+  ([`988e5c9`](https://github.com/DaSteff91/verb-scraper-app/commit/988e5c940d3d230cf7f1d5b15284eea2a6245c1b))
+
+
 ## v1.19.0 (2026-01-21)
 
 ### Features
