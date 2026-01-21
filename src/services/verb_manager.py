@@ -164,7 +164,7 @@ class VerbManager:
         # --- Job Status Update: PROCESSING ---
         if job_id:
             with app_instance.app_context():
-                job = BatchJob.query.get(job_id)
+                job = db.session.get(BatchJob, job_id)
                 if job:
                     job.status = "processing"
                     db.session.commit()
@@ -191,7 +191,7 @@ class VerbManager:
         # --- Job Status Update: COMPLETED ---
         if job_id:
             with app_instance.app_context():
-                job = BatchJob.query.get(job_id)
+                job = db.session.get(BatchJob, job_id)
                 if job:
                     job.status = "completed"
                     job.success_count = results["success"]
