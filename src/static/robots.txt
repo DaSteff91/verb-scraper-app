@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /                  # Allow the home page
+Allow: /results/          # Allow conjugation result pages (Great for search traffic)
+
+Sitemap: https://conjugator.kite-engineer.de/sitemap.xml
+
+Disallow: /api/           # Block raw API data (Don't waste crawl budget here)
+Disallow: /export/        # Block single CSV downloads
+Disallow: /export-batch   # Block batch CSV downloads
+Disallow: /batch-scrape   # Block the processing endpoint
+

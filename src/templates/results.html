@@ -1,4 +1,32 @@
-{% extends "base.html" %} {% block content %}
+{% block title %}Conjugate {{ verb.infinitive | capitalize }}{% endblock %} {%
+block meta_tags %}
+<meta
+  name="description"
+  content="View conjugation tables for the Portuguese verb {{ verb.infinitive }}. Export to CSV for Anki."
+/>
+
+<!-- Rich Previews for all Social/Messaging Apps -->
+<meta property="og:type" content="article" />
+<meta
+  property="og:title"
+  content="Portuguese Conjugation: {{ verb.infinitive | capitalize }}"
+/>
+<meta
+  property="og:description"
+  content="Full conjugation for {{ verb.infinitive }} in {{ mode }} {{ tense }}. Ready for Anki export."
+/>
+<meta property="og:url" content="{{ request.url }}" />
+
+<!-- Twitter / X Specific -->
+<meta
+  name="twitter:title"
+  content="Conjugate {{ verb.infinitive | capitalize }} | Portuguese"
+/>
+<meta
+  name="twitter:description"
+  content="Downloadable Anki CSV for the verb {{ verb.infinitive }}."
+/>
+{% endblock %} {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-12 col-lg-10 col-xl-8">
     <!-- Header & Action Section -->
