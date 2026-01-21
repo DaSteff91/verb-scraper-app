@@ -9,6 +9,7 @@ import io
 import json
 import logging
 from typing import Any, Dict, List, Union, cast
+from sqlalchemy import desc
 
 from flask import (
     Blueprint,
@@ -19,6 +20,9 @@ from flask import (
     request,
     send_file,
     url_for,
+    send_from_directory,
+    make_response,
+    current_app,
 )
 from werkzeug.wrappers import Response as WerkzeugResponse
 
@@ -364,3 +368,37 @@ def export_batch_csv() -> Union[WerkzeugResponse, Any]:
         as_attachment=True,
         download_name=filename,
     )
+
+
+@main_bp.route("/robots.txt")
+def serve_robots() -> WerkzeugResponse:
+    """
+    Serve the robots.txt file from the static directory.
+
+    Returns:
+        WerkzeugResponse: The plain text robots.txt file.
+    """
+    return send_from_directory(
+        cast(str, current_app.static_folder), "robots.txt", mimetype="text/plain"
+    )
+
+
+@main_bp.route("/sitemap.xml")
+def sitemap() -> WerkzeugResponse:
+    """
+    Generate a capped dynamic sitemap for search engines.
+    Limits the query to the 500 most recent verbs to optimize resources.
+    """
+    # 1. Fetch only the most recent 500 verbs
+    verbs = Verb.query.order_by(desc(Verb.created_at)).limit(500).all()
+
+    url_root = request.url_root.rstrip("/")  # Ensure no trailing slash issues
+
+    # 2. Render the XML template
+    sitemap_xml = render_template("sitemap.xml", verbs=verbs, url_root=url_root)
+
+    # 3. Explicitly set the application/xml mimetype
+    response = make_response(sitemap_xml)
+    response.headers["Content-Type"] = "application/xml"
+
+    return response

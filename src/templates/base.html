@@ -3,12 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Universal SEO -->
+    <title>{% block title %}{% endblock %} | Verb Scraper v{{ version }}</title>
+    <link rel="canonical" href="{{ request.url }}" />
+
+    {% block meta_tags %}
+    <meta
+      name="description"
+      content="Generate Anki-ready Portuguese verb conjugation cards. Professional tool for linguistic data extraction."
+    />
+
+    <!-- Open Graph / Facebook / LinkedIn / Discord -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ request.url }}" />
+    <meta property="og:title" content="Portuguese Verb Scraper" />
+    <meta
+      property="og:description"
+      content="Generate high-quality Portuguese verb conjugation cards for Anki."
+    />
+    <meta
+      property="og:image"
+      content="{{ url_for('static', filename='image/og-preview.png', _external=True) }}"
+    />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Portuguese Verb Scraper" />
+    <meta
+      name="twitter:description"
+      content="Professional Portuguese verb conjugation scraper for Anki users."
+    />
+    {% endblock %}
+
     <link
       rel="icon"
       type="image/x-icon"
       href="{{ url_for('static', filename='image/favicon.ico') }}"
     />
-    <title>Verb Scraper v{{ version }}</title>
+    <title>Portuguese Verb Scraper v{{ version }}</title>
 
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
