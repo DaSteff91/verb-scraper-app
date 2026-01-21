@@ -45,14 +45,6 @@ class VerbManager:
     ) -> bool:
         """
         Coordinates scraping a verb and saving it to the 5NF database.
-
-        Args:
-            verb_infinitive: The infinitive form of the verb.
-            mode_name: The grammatical mode to scrape.
-            tense_name: The grammatical tense to scrape.
-
-        Returns:
-            bool: True if persistence was successful, False otherwise.
         """
         logger.debug(
             "Starting persistence for %s (%s %s)",
@@ -61,7 +53,6 @@ class VerbManager:
             tense_name,
         )
 
-        # 1. Scrape the raw data
         forms: Optional[List[str]] = self.scraper.get_conjugations(
             verb_infinitive, mode_name, tense_name
         )
@@ -73,38 +64,28 @@ class VerbManager:
             return False
 
         try:
-            # 2. Get or Create Verb (with extra safety for multi-threading)
-            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()  # type: ignore
+            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
             if not verb:
                 try:
                     verb = Verb(infinitive=verb_infinitive)
                     db.session.add(verb)
-                    db.session.flush()  # Try to push to DB immediately
-                    logger.debug("Created new verb entry: %s", verb_infinitive)
+                    db.session.flush()
                 except Exception:
-                    # If another thread beat us to it, rollback the flush and fetch it
                     db.session.rollback()
                     verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
-                    logger.debug(
-                        "Verb %s was created by another thread.", verb_infinitive
-                    )
 
-            # 3. Get or Create Mode
-            mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore
+            mode = Mode.query.filter_by(name=mode_name).first()
             if not mode:
                 mode = Mode(name=mode_name)
                 db.session.add(mode)
                 db.session.flush()
 
-            # 4. Get or Create Tense (linked to Mode)
-            tense = Tense.query.filter_by(name=tense_name, mode=mode).first()  # type: ignore
+            tense = Tense.query.filter_by(name=tense_name, mode_id=mode.id).first()
             if not tense:
                 tense = Tense(name=tense_name, mode=mode)
                 db.session.add(tense)
+                db.session.flush()
 
-            db.session.flush()
-
-            # 5. Handle person mapping and offsets
             offset: int = 0
             if len(forms) == 5 and mode_name == "Imperativo":
                 offset = 1
@@ -115,14 +96,14 @@ class VerbManager:
                     break
 
                 p_name: str = self.person_names[p_index]
-                person = Person.query.filter_by(name=p_name).first()  # type: ignore
+                person = Person.query.filter_by(name=p_name).first()
                 if not person:
                     person = Person(name=p_name, sort_order=p_index)
                     db.session.add(person)
                     db.session.flush()
 
-                exists = Conjugation.query.filter_by(  # type: ignore
-                    verb=verb, tense=tense, person=person
+                exists = Conjugation.query.filter_by(
+                    verb_id=verb.id, tense_id=tense.id, person_id=person.id
                 ).first()
 
                 if not exists:
@@ -132,12 +113,6 @@ class VerbManager:
                     db.session.add(conj)
 
             db.session.commit()
-            logger.info(
-                "Successfully persisted %s (%s %s)",
-                verb_infinitive,
-                mode_name,
-                tense_name,
-            )
             return True
 
         except Exception as e:
@@ -150,37 +125,23 @@ class VerbManager:
     ) -> Dict[str, int]:
         """
         Orchestrates a batch of scraping tasks using a thread pool.
-
-        Args:
-            tasks: A list of dictionaries containing 'verb', 'mode', and 'tense'.
-            job_id: Optional ID of a BatchJob record to update during execution.
-
-        Returns:
-            Dict[str, int]: A summary of the batch execution (total, success, failed).
         """
         results = {"total": len(tasks), "success": 0, "failed": 0}
-        app_instance = current_app._get_current_object()  # type: ignore
+        app_instance = current_app._get_current_object()
 
-        # --- Job Status Update: PROCESSING ---
         if job_id:
             with app_instance.app_context():
                 job = db.session.get(BatchJob, job_id)
                 if job:
                     job.status = "processing"
                     db.session.commit()
-                    logger.info("Job [%s] status updated to PROCESSING", job_id)
 
         def threaded_task(task: Dict[str, str]) -> bool:
-            """Internal worker to handle a single scrape within an app context."""
-            # Give the website some breathing room (Good Citizen Jitter)
-            time.sleep(random.uniform(0.3, 1.0))
-
+            time.sleep(random.uniform(0.1, 0.5))
             with app_instance.app_context():
                 return self.get_or_create_verb_data(
                     task["verb"], task["mode"], task["tense"]
                 )
-
-        logger.info("Starting batch execution for %d tasks...", len(tasks))
 
         with ThreadPoolExecutor(max_workers=3) as executor:
             outcomes = list(executor.map(threaded_task, tasks))
@@ -188,7 +149,6 @@ class VerbManager:
         results["success"] = outcomes.count(True)
         results["failed"] = outcomes.count(False)
 
-        # --- Job Status Update: COMPLETED ---
         if job_id:
             with app_instance.app_context():
                 job = db.session.get(BatchJob, job_id)
@@ -198,12 +158,6 @@ class VerbManager:
                     job.failed_count = results["failed"]
                     job.completed_at = datetime.now(UTC)
                     db.session.commit()
-                    logger.info(
-                        "Job [%s] completed. Success: %d, Failed: %d",
-                        job_id,
-                        results["success"],
-                        results["failed"],
-                    )
 
         return results
 
@@ -222,15 +176,20 @@ class VerbManager:
         try:
             # 1. Create Core Entities
             verb = Verb(infinitive=verb_inf)
-            mode = Mode.query.filter_by(name="Indicativo").first() or Mode(
-                name="Indicativo"
-            )
-            tense = Tense.query.filter_by(name="Presente", mode=mode).first() or Tense(
-                name="Presente", mode=mode
-            )
+            db.session.add(verb)
 
-            db.session.add_all([verb, mode, tense])
-            db.session.flush()
+            mode = Mode.query.filter_by(name="Indicativo").first()
+            if not mode:
+                mode = Mode(name="Indicativo")
+                db.session.add(mode)
+                # CRITICAL: Flush so mode.id is available for the next step
+                db.session.flush()
+
+            tense = Tense.query.filter_by(name="Presente", mode_id=mode.id).first()
+            if not tense:
+                tense = Tense(name="Presente", mode=mode)
+                db.session.add(tense)
+                db.session.flush()
 
             # 2. Add 'Gold Standard' Conjugations
             seed_data = [
