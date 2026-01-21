@@ -86,5 +86,5 @@ def test_no_duplicate_entities_on_second_scrape(
     assert Tense.query.count() == 1  # type: ignore
     assert Person.query.count() == 6  # type: ignore
 
-    # Total conjugations should be 12 (6 per verb)
-    assert Conjugation.query.count() == 12  # type: ignore
+    # Total conjugations should be 18 (3 times 6 per verb)
+    assert Conjugation.query.count() == 18  # type: ignore
