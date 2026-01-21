@@ -302,60 +302,57 @@ def health_check() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     Deep diagnostic health check.
 
     Verifies database connectivity, readiness (seeding), and
-    filesystem write permissions. Restricted to localhost only.
+    filesystem write permissions. Secured via API Key authentication.
     """
-    # 1. Security: Allow internal loopback and the Docker bridge gateway
-    # 127.0.0.1 = Standard Loopback
-    # 172.17.0.1 = Standard Docker Bridge Gateway
-    # ::1 = IPv6 Loopback
-    allowed_ips = ["127.0.0.1", "::1", "172.17.0.1"]
+    # 1. Lazy Import the gatekeeper for memory optimization
+    from src.services.auth import require_api_key
 
-    if request.remote_addr not in allowed_ips:
-        logger.warning(
-            "External health check attempt blocked from: %s", request.remote_addr
-        )
-        return jsonify({"error": "Forbidden"}), 403
+    @require_api_key
+    def handle_health() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+        # Define a strictly typed report dictionary
+        health_report: Dict[str, Any] = {
+            "status": "healthy",
+            "timestamp": datetime.now(UTC).timestamp(),
+            "checks": {"database": "fail", "storage": "fail", "readiness": "fail"},
+        }
+        is_healthy: bool = True
 
-    health_report: Dict[str, Any] = {
-        "status": "healthy",
-        "timestamp": datetime.now(UTC).timestamp(),
-        "checks": {"database": "fail", "storage": "fail", "readiness": "fail"},
-    }
-    is_healthy = True
+        try:
+            # 2. Database Check: Execute a trivial query
+            db.session.execute(text("SELECT 1"))
+            health_report["checks"]["database"] = "ok"
 
-    try:
-        # 2. Database Check: Can we talk to the DB?
-        db.session.execute(text("SELECT 1"))
-        health_report["checks"]["database"] = "ok"
+            # 3. Readiness Check: Verify seeder has finished
+            verb = cast(
+                Optional[Verb], Verb.query.filter_by(infinitive="comer").first()
+            )
+            if verb:
+                health_report["checks"]["readiness"] = "ok"
+            else:
+                is_healthy = False
+                logger.warning("Health Check: System not yet seeded.")
 
-        # 3. Readiness Check: Has the seeder finished?
-        verb = Verb.query.filter_by(infinitive="comer").first()
-        if verb:
-            health_report["checks"]["readiness"] = "ok"
-        else:
+        except Exception as e:
             is_healthy = False
-            logger.warning("Health Check: System not yet seeded.")
+            health_report["checks"]["database"] = f"error: {str(e)}"
+            logger.error("Health Check: Database failure: %s", e)
 
-    except Exception as e:
-        is_healthy = False
-        health_report["checks"]["database"] = f"error: {str(e)}"
-        logger.error("Health Check: Database failure: %s", e)
+        try:
+            # 4. Storage Check: Verify volume write permissions
+            instance_path = Path(current_app.config["INSTANCE_PATH"])
+            test_file = instance_path / ".health_test"
+            test_file.touch()
+            test_file.unlink()
+            health_report["checks"]["storage"] = "ok"
+        except Exception as e:
+            is_healthy = False
+            health_report["checks"]["storage"] = f"error: {str(e)}"
+            logger.error("Health Check: Storage write failure: %s", e)
 
-    try:
-        # 4. Storage Check: Is the instance folder writable?
-        # We try to touch a hidden file in the instance folder
-        instance_path = Path(current_app.config["INSTANCE_PATH"])
-        test_file = instance_path / ".health_test"
-        test_file.touch()
-        test_file.unlink()  # Delete after success
-        health_report["checks"]["storage"] = "ok"
-    except Exception as e:
-        is_healthy = False
-        health_report["checks"]["storage"] = f"error: {str(e)}"
-        logger.error("Health Check: Storage write failure: %s", e)
+        if not is_healthy:
+            health_report["status"] = "unhealthy"
+            return jsonify(health_report), 503
 
-    if not is_healthy:
-        health_report["status"] = "unhealthy"
-        return jsonify(health_report), 503
+        return jsonify(health_report), 200
 
-    return jsonify(health_report), 200
+    return handle_health()
