@@ -31,6 +31,33 @@ jobs:
         # SETTING: Change this to 'false' to block the build if tests fail
         continue-on-error: true
 
+      - name: Extract Coverage Percentage
+        id: extract_coverage
+        run: |
+          # Extract the total line-rate from coverage.xml and convert to percentage
+          COVERAGE=$(grep -oP 'line-rate="\K[^"]+' coverage.xml | head -1)
+          PERCENTAGE=$(python -c "print(int(float('$COVERAGE') * 100))")
+          echo "percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
+          
+          # Determine color based on percentage
+          if [ "$PERCENTAGE" -ge 80 ]; then
+            echo "color=brightgreen" >> $GITHUB_OUTPUT
+          elif [ "$PERCENTAGE" -ge 60 ]; then
+            echo "color=yellow" >> $GITHUB_OUTPUT
+          else
+            echo "color=red" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Coverage Badge Gist
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 6b9d36ea3da77d9064471310bdf46ec7
+          filename: coverage.json
+          label: Code Coverage
+          message: ${{ steps.extract_coverage.outputs.percentage }}%
+          color: ${{ steps.extract_coverage.outputs.color }}
+
   versioning:
     name: Running Python Semantic Release
     permissions:

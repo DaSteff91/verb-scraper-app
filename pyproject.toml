@@ -28,8 +28,7 @@ upload_to_release = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-# Default arguments: generate a coverage report and show local variables on failure
-addopts = "--cov=src --cov-report=term-missing -vv"
+addopts = "--cov=src --cov-report=term-missing --cov-report=xml -vv"
 markers = [
     "online: tests that require real internet access (contract tests)",
 ]
