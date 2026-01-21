@@ -27,7 +27,7 @@ def test_get_or_create_verb_data_success(
     manager = VerbManager()
     mock_content = sample_html("falar.html")
     requests_mock.get(
-        f"{manager.scraper.base_url}{verb_infinitive}/", text=mock_content
+        f"{manager.primary_scraper.base_url}{verb_infinitive}/", text=mock_content
     )
 
     # 2. Execute
@@ -72,11 +72,11 @@ def test_no_duplicate_entities_on_second_scrape(
     ir_html = sample_html("ir.html")
 
     # 1. Scrape 'falar' first
-    requests_mock.get(f"{manager.scraper.base_url}falar/", text=falar_html)
+    requests_mock.get(f"{manager.primary_scraper.base_url}falar/", text=falar_html)
     manager.get_or_create_verb_data("falar", "Indicativo", "Presente")
 
     # 2. Scrape 'ir' (same mode/tense)
-    requests_mock.get(f"{manager.scraper.base_url}ir/", text=ir_html)
+    requests_mock.get(f"{manager.primary_scraper.base_url}ir/", text=ir_html)
     manager.get_or_create_verb_data("ir", "Indicativo", "Presente")
 
     # 3. Assertions
@@ -125,4 +125,49 @@ def test_get_or_create_verb_data_failover_success(
         assert verb is not None
         # Check that we have 6 conjugations (from the backup mock)
         assert len(verb.conjugations) == 6
-        assert verb.conjugations[0].value == "eu vou"  # Values from our mock HTML
+        assert verb.conjugations[0].value == "eu vou"
+
+
+def test_manager_creates_new_mode_and_tense(app, requests_mock, sample_html):
+    """
+    Verify that VerbManager creates fresh Mode and Tense records if they
+    don't exist in the database (Testing the 'if not exists' logic).
+    """
+    verb_inf, mode, tense = "fugir", "Subjuntivo", "Futuro"
+    manager = VerbManager()
+
+    # 1. Setup Mock HTML
+    # We use a mock that contains the IDs the backup scraper expects
+    mock_html = """
+    <div id="subj_future1"><span class="meta-form">fugir</span></div>
+    <div id="subj_future2"><span class="meta-form">fugires</span></div>
+    <div id="subj_future3"><span class="meta-form">fugir</span></div>
+    <div id="subj_future4"><span class="meta-form">fugirmos</span></div>
+    <div id="subj_future5"><span class="meta-form">fugirdes</span></div>
+    <div id="subj_future6"><span class="meta-form">fugirem</span></div>
+    """
+
+    # 2. Mock PRIMARY (Will fail to find h3 Subjuntivo in this snippet)
+    primary_url = f"{manager.primary_scraper.base_url}{verb_inf}/"
+    requests_mock.get(primary_url, text=mock_html)
+
+    # 3. Mock BACKUP (Will succeed using the IDs above)
+    backup_url = f"{manager.backup_scraper.base_url}{verb_inf}"
+    requests_mock.get(backup_url, text=mock_html)
+
+    # 4. Execute
+    with app.app_context():
+        # Pre-check: Ensure Subjuntivo/Futuro does NOT exist yet
+        assert Mode.query.filter_by(name=mode).first() is None
+
+        success = manager.get_or_create_verb_data(verb_inf, mode, tense)
+        assert success is True
+
+        # 5. Assertions: Verify creation of new Mode and Tense in 5NF
+        new_mode = Mode.query.filter_by(name=mode).first()
+        assert new_mode is not None
+        assert new_mode.name == "Subjuntivo"
+
+        new_tense = Tense.query.filter_by(name=tense, mode=new_mode).first()
+        assert new_tense is not None
+        assert new_tense.mode_id == new_mode.id

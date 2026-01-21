@@ -148,3 +148,41 @@ def test_generate_verb_csv_skip_tu_vos_structural(app) -> None:
     # Ensure specific forms are absent
     assert "val_1" not in forms  # tu
     assert "val_4" not in forms  # vós
+
+
+def test_generate_batch_csv_logic(app):
+    """
+    Verify that the batch exporter correctly aggregates different verbs
+    into a single multi-row CSV string.
+    """
+    # 1. Setup mock data structure
+    p1 = Person(name="eu")
+    p2 = Person(name="ele/ela/você")
+
+    batch_data = [
+        {
+            "verb": "falar",
+            "mode": "Indicativo",
+            "tense": "Presente",
+            "conjugations": [Conjugation(value="falo", person=p1)],
+        },
+        {
+            "verb": "comer",
+            "mode": "Indicativo",
+            "tense": "Presente",
+            "conjugations": [Conjugation(value="come", person=p2)],
+        },
+    ]
+
+    # 2. Execute
+    from src.services.exporter import AnkiExporter
+
+    csv_output = AnkiExporter.generate_batch_csv(batch_data, skip_tu_vos=False)
+
+    # 3. Assertions
+    # We expect two distinct rows
+    rows = csv_output.strip().split("\n")
+    assert len(rows) == 2
+    assert '"falar"' in rows[0]
+    assert '"comer"' in rows[1]
+    assert "Indicativo Presente" in rows[0]

@@ -11,6 +11,7 @@ from typing import Dict, Any
 import requests_mock
 from src.models.verb import BatchJob
 from src.extensions import db
+from src.services.verb_manager import VerbManager
 
 
 def test_index_route_get(client: FlaskClient) -> None:
@@ -84,8 +85,15 @@ def test_scrape_form_failure_handling(
     """
     Verify the UI correctly displays an error when the scraper fails.
     """
+
+    manager = VerbManager()
+
     # Mock a website failure
-    requests_mock.get("https://www.conjugacao.com.br/verbo-badverb/", status_code=404)
+    primary_url = f"{manager.primary_scraper.base_url}badverb/"
+    requests_mock.get(primary_url, status_code=404)
+
+    backup_url = f"{manager.backup_scraper.base_url}badverb"
+    requests_mock.get(backup_url, status_code=404)
 
     # Submit the form
     response = client.post(
@@ -95,7 +103,6 @@ def test_scrape_form_failure_handling(
     )
 
     assert response.status_code == 200
-    # FIX: We look for the partial string to avoid HTML entity escaping issues (&#39;)
     assert b"Could not find the verb" in response.data
     assert b"badverb" in response.data
 

@@ -45,8 +45,8 @@ def test_process_batch_lifecycle(
 
     # Mocking different responses (using falar.html for both for simplicity)
     falar_content: str = sample_html("falar.html")
-    requests_mock.get(f"{manager.scraper.base_url}falar/", text=falar_content)
-    requests_mock.get(f"{manager.scraper.base_url}comer/", text=falar_content)
+    requests_mock.get(f"{manager.primary_scraper.base_url}falar/", text=falar_content)
+    requests_mock.get(f"{manager.primary_scraper.base_url}comer/", text=falar_content)
 
     # 2. Create the initial BatchJob record
     with app.app_context():
