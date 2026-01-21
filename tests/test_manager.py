@@ -80,8 +80,8 @@ def test_no_duplicate_entities_on_second_scrape(
     manager.get_or_create_verb_data("ir", "Indicativo", "Presente")
 
     # 3. Assertions
-    # We should have 2 verbs but still only 1 Mode, 1 Tense, and 6 Persons
-    assert Verb.query.count() == 2  # type: ignore
+    # We should have 2 verbs but still only 1 Mode, 1 Tense, and 6 Persons as well as one additional (comer) from the DB seeding
+    assert Verb.query.count() == 3  # type: ignore
     assert Mode.query.count() == 1  # type: ignore
     assert Tense.query.count() == 1  # type: ignore
     assert Person.query.count() == 6  # type: ignore

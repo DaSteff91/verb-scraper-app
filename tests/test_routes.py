@@ -74,8 +74,7 @@ def test_export_csv_route_no_data(client: FlaskClient) -> None:
     """
     # Attempt to export 'comer' before scraping it.
     # The route uses first_or_404(), so we expect a 404.
-    response = client.get("/export/comer?mode=Indicativo&tense=Presente")
-
+    response = client.get("/export/nonexistentverb?mode=Indicativo&tense=Presente")
     assert response.status_code == 404
 
 

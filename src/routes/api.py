@@ -340,6 +340,8 @@ def health_check() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
         try:
             # 4. Storage Check: Verify volume write permissions
             instance_path = Path(current_app.config["INSTANCE_PATH"])
+            # Ensure directory exists
+            instance_path.mkdir(parents=True, exist_ok=True)
             test_file = instance_path / ".health_test"
             test_file.touch()
             test_file.unlink()
