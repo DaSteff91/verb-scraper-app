@@ -57,7 +57,7 @@ class CooljugatorScraper(BaseScraper):
             return None
 
         try:
-            response = requests.get(url, timeout=self.timeout, headers=self.headers)
+            response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error("Backup Source connection failure for %s: %s", url, e)

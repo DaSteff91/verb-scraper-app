@@ -45,7 +45,7 @@ class ConjugacaoScraper(BaseScraper):
         logger.info("Primary Source: Scraping URL: %s", url)
 
         try:
-            response = requests.get(url, timeout=self.timeout, headers=self.headers)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error("Primary Source connection failure for %s: %s", url, e)
