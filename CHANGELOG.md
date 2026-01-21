@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.17.4 (2026-01-21)
+
+### Bug Fixes
+
+- **wrong-indentation-caused-tests-to-fail**: Fixed the indentation in src.services/verb_manager.py
+  seed_default_data
+  ([`52e58f4`](https://github.com/DaSteff91/verb-scraper-app/commit/52e58f4cc4f0582dc57b41136f59e191f697d135))
+
+
 ## v1.17.3 (2026-01-21)
 
 ### Bug Fixes
