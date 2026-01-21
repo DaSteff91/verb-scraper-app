@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.17.5 (2026-01-21)
+
+### Bug Fixes
+
+- **fixing-a-logic-error**: Wrong calclulation fixed as well as adding test result as hard critiera
+  to block app building
+  ([`3b6275f`](https://github.com/DaSteff91/verb-scraper-app/commit/3b6275f3c76159eec464127b7f596bb0282c6f6d))
+
+
 ## v1.17.4 (2026-01-21)
 
 ### Bug Fixes
