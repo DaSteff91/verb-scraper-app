@@ -2,6 +2,16 @@
 
 <!-- version list -->
 
+## v1.16.3 (2026-01-21)
+
+### Bug Fixes
+
+-
+  **the-healthcheck-was-accessible-from-the-outside-world---i-wanted-it-to-be-accessible-only-from-within-my-own-notwork**:
+  Implemented a handshake with api key
+  ([`90e06b7`](https://github.com/DaSteff91/verb-scraper-app/commit/90e06b791424c7cbe381239bd3d14a843d845697))
+
+
 ## v1.16.2 (2026-01-20)
 
 ### Bug Fixes
