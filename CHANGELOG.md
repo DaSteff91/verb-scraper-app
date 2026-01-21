@@ -2,6 +2,43 @@
 
 <!-- version list -->
 
+## v1.17.0 (2026-01-21)
+
+### Bug Fixes
+
+- **adding-new-tests-for-async-batching**: Implementing two new test functions that simulate real
+  behaviour
+  ([`c16c44a`](https://github.com/DaSteff91/verb-scraper-app/commit/c16c44af6644e900e7a4c463d430f32ad5b940ed))
+
+- **fixing-db-seeding-and-testing**: Test api parameters now
+  ([`1b510b8`](https://github.com/DaSteff91/verb-scraper-app/commit/1b510b88187e11a981c29a3a484054b7db40fc9a))
+
+- **implement-batch-UI-handshake-and-imperative-offset-logic**: - Adds tests for Alpine.js to
+  backend batch POST handshake
+  ([`30f43be`](https://github.com/DaSteff91/verb-scraper-app/commit/30f43bef8a4b0392ccff82d74c53293a3de571dc))
+
+- **some-wording-has-changed-after-refactoring-and-redesigning-the-UI**: Reflect the new wording in
+  the tests to not fail
+  ([`68b3979`](https://github.com/DaSteff91/verb-scraper-app/commit/68b397903803b283f94daa17bba34fa366cab93a))
+
+### Continuous Integration
+
+- **implement-live-code-coverage-badge-using-GitHub-Gists**: - Configure GitHub Action to parse
+  coverage.xml and calculate percentage
+  ([`eac5535`](https://github.com/DaSteff91/verb-scraper-app/commit/eac55355a52793aed14e1478eedc3b6b074d2abf))
+
+### Features
+
+- **creating-new-tests-for-the-BatchJob-model-and-the-database**: New file
+  ([`811cd15`](https://github.com/DaSteff91/verb-scraper-app/commit/811cd15b267c3b4df41155fa51976e6de8b23de3))
+
+### Testing
+
+- **implement-system-maintenance-and-batch-validation-coverage**: - Adds coverage for
+  InputValidator.validate_batch logic
+  ([`9a0f1a5`](https://github.com/DaSteff91/verb-scraper-app/commit/9a0f1a5b9e8c27268f1a4936a5b6c55d18da9582))
+
+
 ## v1.16.4 (2026-01-21)
 
 ### Bug Fixes
