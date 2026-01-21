@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v1.18.0 (2026-01-21)
+
+### Bug Fixes
+
+- **fixing-a-logic-error**: Wrong calclulation fixed as well as adding test result as hard critiera
+  to block app building
+  ([`876420d`](https://github.com/DaSteff91/verb-scraper-app/commit/876420d284afd9222af623958bddcc09f33fb291))
+
+### Features
+
+- **implement-technical-SEO-and-universal-visibility-suite**: - Add dynamic capped sitemap.xml
+  listing the 500 most recent verbs
+  ([`e0d6a99`](https://github.com/DaSteff91/verb-scraper-app/commit/e0d6a99aa452d010b6008f8955776ec5618bf3b4))
+
+
 ## v1.17.5 (2026-01-21)
 
 ### Bug Fixes
