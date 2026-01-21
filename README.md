@@ -8,13 +8,13 @@
 
 ## Summary
 
-The Verb Scraper App is a high-performance web application and RESTful API designed to automate the extraction, normalization, and persistence of Portuguese verb conjugations. Built with a focus on data integrity and software lifecycle management, the application provides a seamless pipeline from concurrent web scraping to SQLite persistence (5NF) and structured CSV export optimized for study tools such as Anki.
+The Verb Scraper App is a web application and RESTful API for extracting and normalizing Portuguese verb conjugations. The system automates the transition from unstructured HTML data to a relational SQLite database (5NF) and generates structured CSV exports for tools like Anki.
 
 ## System Architecture
 
 ### Asynchronous Data Flow
 
-The application utilizes a Non-Blocking "Restaurant Pager" pattern for batch requests to ensure API responsiveness and server stability during long-running scraping tasks.
+The application implements a "Restaurant Pager" pattern for batch requests. This ensures the API remains responsive while long-running scraping tasks execute in background threads.
 
 ```mermaid
 sequenceDiagram
@@ -47,65 +47,63 @@ sequenceDiagram
 
 ```text
 verb-scraper-app/
-├── .github/                # CI/CD Workflows
-├── instance/               # Local SQLite storage (excluded from Git)
-├── src/                    # Source code
-│   ├── models/             # Database Schema (SQLAlchemy 5NF)
-│   │   └── verb.py         # Verb, Mode, Tense, Person, Conjugation, BatchJob
-│   ├── routes/             # Controllers (Flask Blueprints)
-│   │   ├── main.py         # Web Interface routes
-│   │   └── api.py          # REST API v1 routes
-│   ├── services/           # Business Logic
-│   │   ├── auth.py         # API Key Authentication Decorator
-│   │   ├── scraper.py      # BeautifulSoup scoping logic
-│   │   ├── verb_manager.py # Threaded batch orchestration
-│   │   ├── exporter.py     # Anki CSV generation (Native CSV)
-│   │   └── validator.py    # Input and Batch validation
-│   ├── templates/          # Jinja2 Templates (Dashboard & Accordion)
-│   ├── config.py           # Environment-based configuration (Fail-Fast)
-│   └── __init__.py         # Application Factory
-├── tests/                  # Pytest suite
-├── Dockerfile              # Production slim image configuration
-├── docker-compose.yml      # Local and production orchestration
-└── run.py                  # WSGI entry point
+├── .github/                # CI/CD workflows for testing and deployment
+├── instance/               # Persistent SQLite storage and health check markers
+├── src/                    # Application source code
+│   ├── models/             # SQLAlchemy 5NF schema (Verbs, Modes, Tenses, Persons, Conjugations)
+│   ├── routes/             # Flask Blueprints (Web UI and REST API v1)
+│   ├── services/           # Logic for auth, scraping, batching, and CSV generation
+│   ├── templates/          # Jinja2 templates using Alpine.js for frontend logic
+│   ├── config.py           # Fail-fast configuration loading
+│   └── __init__.py         # App factory and logger initialization
+├── tests/                  # Pytest suite (Unit, Integration, and Remote Contract tests)
+├── Dockerfile              # Multi-stage production image
+├── docker-compose.yml      # Local and production service orchestration
+└── run.py                  # Entry point for WSGI servers
 ```
 
-## Features
+## Detailed Features
 
-- Full 6-Person Paradigm: Supports the complete Portuguese conjugation set.
-- Regional Dialect Support: Automatically filters 2nd person (tu/vós) by default for Brazilian Portuguese.
-- Dynamic UI Logic: Alpine.js "Scrape Basket" with multi-select highlighter pills.
-- Asynchronous Batch Processing: Concurrent scraping via ThreadPoolExecutor.
-- Secure REST API: Header-based authentication (X-API-KEY).
-- Anki Integration: Optimized CSV generation using native Python byte-streams.
-- Memory Optimized: Lazy-loading services keep the idle footprint under 60MB.
+- **Grammatical Coverage:**
+  - Full support for all 6-person paradigms (Eu, Tu, Ele, Nós, Vós, Eles).
+  - Handles irregular verb structures (e.g., _pôr_, _ir_) via scoped DOM traversal.
+  - Includes a whitelist-based validator for grammatical Modes and Tenses.
+- **Data Integrity & Persistence:**
+  - **5th Normal Form (5NF) Database:** Minimizes redundancy by separating grammatical metadata from verb instances.
+  - **Atomic Transactions:** Ensures database consistency during multi-threaded batch writes.
+  - **Automated Janitor:** Self-cleaning logic for background job records to prevent database bloat.
+- **API & Backend Logic:**
+  - **Threaded Batch Engine:** Concurrent scraping using `ThreadPoolExecutor` with a configurable worker pool.
+  - **Asynchronous Jobs:** UUID-based job tracking for non-blocking API interactions.
+  - **Diagnostic Health Checks:** Endpoint for verifying DB connectivity, filesystem write permissions, and system seeding status.
+  - **Dialect Normalization:** Automatic filtering of second-person forms (_tu_/_vós_) for Brazilian Portuguese study requirements.
+- **User Interface:**
+  - **Scrape Basket:** Alpine.js-powered frontend for building batch requests locally before submission.
+  - **Dynamic Results Dashboard:** Accordion-style views for reviewing batch results.
+- **Export Capabilities:**
+  - **Anki Integration:** CSV generation using byte-streams with UTF-8-SIG encoding for direct import into flashcard software.
+  - **Native Formatting:** Supports newline-separated values within CSV fields for card styling.
 
 ## API Documentation
 
 ### Authentication
 
-All API requests require the following header:
+Include the following header in all requests:
 `X-API-KEY: <your_configured_key>`
 
 ### Endpoints
 
-| Method | Endpoint              | Description                                                    |
-| :----- | :-------------------- | :------------------------------------------------------------- |
-| GET    | `/api/v1/verbs/<inf>` | Get conjugations. Supports `?dialect=br\|pt` and `?anki=true`. |
-| POST   | `/api/v1/scrape`      | Trigger a single-verb scrape. Returns 201 Created.             |
-| POST   | `/api/v1/batch`       | Trigger background batch scrape. Returns 202 Accepted.         |
-| GET    | `/api/v1/batch/<id>`  | Poll status of a background job.                               |
+- `GET /api/v1/verbs/<infinitive>`: Retrieve stored conjugations.
+  - `dialect=br|pt`: Filter out 2nd person forms.
+  - `anki=true`: Return a formatted CSV string in the JSON response.
+- `POST /api/v1/scrape`: Synchronous trigger for a single verb/mode/tense combination.
+- `POST /api/v1/batch`: Submit a list of tasks for background processing. Returns 202 and a Job ID.
+- `GET /api/v1/batch/<job_id>`: Check progress of a background task.
+- `GET /api/v1/health`: System diagnostic report.
 
 ## Local Development Setup
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/DaSteff91/verb-scraper-app.git
-cd verb-scraper-app
-```
-
-### 2. Environment Setup
+### 1. Environment Initialization
 
 ```bash
 python -m venv .venv
@@ -113,18 +111,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
+### 2. Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root:
 
 ```text
-FLASK_APP=run.py
-FLASK_DEBUG=1
-SECRET_KEY=your_flask_secret
-API_KEY=your_secure_api_token
+SECRET_KEY=your_secret_string
+API_KEY=your_api_token
+LOG_LEVEL=DEBUG
 ```
 
-### 4. Launch the Application
+### 3. Execution
 
 ```bash
 python run.py
@@ -134,30 +131,24 @@ python run.py
 
 ### Docker Orchestration
 
-The application is optimized for containerized environments using a non-privileged user and a single-worker, multi-threaded Gunicorn configuration. To build and launch the container:
+The production environment uses Gunicorn behind a containerized setup.
 
 ```bash
 docker compose up -d --build
 ```
 
-## Quality Standards
+## Quality & Engineering Standards
 
-- Type Hinting: Strictly enforced PEP 484 annotations (Pylance/Mypy compatible).
-- Error Handling: Global JSON error handling for 100% API reliability.
-- Maintenance: Automated Job Janitor for database record lifecycle management.
-- Documentation: Google-style docstrings for all modules.
-- Linting: Configured for Black, Flake8, and Mypy.
+- **Testing:** CI/CD pipeline executes Unit tests, Integration tests, and "Contract Tests" that verify the scraper against the live external website structure.
+- **Versioning:** Automated semantic versioning and GitHub release generation based on commit history.
+- **Typing:** PEP 484 type annotations enforced for all core modules.
+- **Security:** Header-based API authentication and input sanitization to prevent injection and SSRF.
 
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## Live version
+## Live Version
 
 [conjugator.kite-engineer.de](https://conjugator.kite-engineer.de)
 
 ## Contact
 
-Kite-Engineer - by Stefan Merthan
-Website: [www.kite-engineer.de](https://www.kite-engineer.de)  
-Project Link: [https://github.com/DaSteff91/verb-scraper-app](https://github.com/DaSteff91/verb-scraper-app)
+Stefan Merthan (Kite-Engineer)
+[www.kite-engineer.de](https://www.kite-engineer.de)
