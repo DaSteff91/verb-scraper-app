@@ -88,3 +88,41 @@ def test_no_duplicate_entities_on_second_scrape(
 
     # Total conjugations should be 18 (3 times 6 per verb)
     assert Conjugation.query.count() == 18  # type: ignore
+
+
+def test_get_or_create_verb_data_failover_success(
+    app: Flask, requests_mock: requests_mock.Mocker, sample_html: Callable[[str], str]
+) -> None:
+    """
+    Verify the failover orchestration:
+    If Primary Source fails, the Manager must use the Backup Source.
+    """
+    # 1. Setup
+    verb_inf = "sentir"
+    mode = "Indicativo"
+    tense = "Presente"
+    manager = VerbManager()
+
+    # 2. Mocking the Primary Source to FAIL (404)
+    primary_url = f"{manager.primary_scraper.base_url}{verb_inf}/"
+    requests_mock.get(primary_url, status_code=404)
+
+    # 3. Mocking the Backup Source to SUCCEED
+    backup_url = f"{manager.backup_scraper.base_url}{verb_inf}"
+    backup_html = sample_html("ir_cooljugator.html")  # Reuse simplified sample
+    requests_mock.get(backup_url, text=backup_html)
+
+    # 4. Execute
+    with app.app_context():
+        success = manager.get_or_create_verb_data(verb_inf, mode, tense)
+
+    # 5. Assertions
+    assert success is True
+
+    # Verify the data was saved to the DB despite primary failure
+    with app.app_context():
+        verb = Verb.query.filter_by(infinitive=verb_inf).first()
+        assert verb is not None
+        # Check that we have 6 conjugations (from the backup mock)
+        assert len(verb.conjugations) == 6
+        assert verb.conjugations[0].value == "eu vou"  # Values from our mock HTML
