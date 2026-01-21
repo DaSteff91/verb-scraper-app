@@ -207,63 +207,62 @@ class VerbManager:
 
         return results
 
+    def seed_default_data(self) -> None:
+        """
+        Seeds the database with a 'Gold Standard' verb (comer) if it
+        doesn't already exist. Used for system health checks and testing.
+        """
+        verb_inf = "comer"
+        # Check if already seeded to avoid redundant logic
+        if Verb.query.filter_by(infinitive=verb_inf).first():
+            logger.debug("Database already seeded with '%s'.", verb_inf)
+            return
 
-def seed_default_data(self) -> None:
-    """
-    Seeds the database with a 'Gold Standard' verb (comer) if it
-    doesn't already exist. Used for system health checks and testing.
-    """
-    verb_inf = "comer"
-    # Check if already seeded to avoid redundant logic
-    if Verb.query.filter_by(infinitive=verb_inf).first():
-        logger.debug("Database already seeded with '%s'.", verb_inf)
-        return
+        logger.info("Seeding default data: %s", verb_inf)
+        try:
+            # 1. Create Core Entities
+            verb = Verb(infinitive=verb_inf)
+            db.session.add(verb)
 
-    logger.info("Seeding default data: %s", verb_inf)
-    try:
-        # 1. Create Core Entities
-        verb = Verb(infinitive=verb_inf)
-        db.session.add(verb)
+            # Handle Mode
+            mode = Mode.query.filter_by(name="Indicativo").first()
+            if not mode:
+                mode = Mode(name="Indicativo")
+                db.session.add(mode)
 
-        # Handle Mode
-        mode = Mode.query.filter_by(name="Indicativo").first()
-        if not mode:
-            mode = Mode(name="Indicativo")
-            db.session.add(mode)
+            # Flush so mode.id is generated
+            db.session.flush()
 
-        # Flush so mode.id is generated
-        db.session.flush()
+            # Handle Tense (Now mode.id is guaranteed to exist)
+            tense = Tense.query.filter_by(name="Presente", mode_id=mode.id).first()
+            if not tense:
+                tense = Tense(name="Presente", mode=mode)
+                db.session.add(tense)
 
-        # Handle Tense (Now mode.id is guaranteed to exist)
-        tense = Tense.query.filter_by(name="Presente", mode_id=mode.id).first()
-        if not tense:
-            tense = Tense(name="Presente", mode=mode)
-            db.session.add(tense)
+            db.session.flush()
 
-        db.session.flush()
+            # 2. Add 'Gold Standard' Conjugations
+            seed_data = [
+                ("eu", "eu como"),
+                ("tu", "tu comes"),
+                ("ele/ela/você", "ele come"),
+                ("nós", "nós comemos"),
+                ("vós", "vós comeis"),
+                ("eles/elas/vocês", "eles comem"),
+            ]
 
-        # 2. Add 'Gold Standard' Conjugations
-        seed_data = [
-            ("eu", "eu como"),
-            ("tu", "tu comes"),
-            ("ele/ela/você", "ele come"),
-            ("nós", "nós comemos"),
-            ("vós", "vós comeis"),
-            ("eles/elas/vocês", "eles comem"),
-        ]
+            for p_name, val in seed_data:
+                person = Person.query.filter_by(name=p_name).first()
+                if not person:
+                    person = Person(name=p_name, sort_order=0)
+                    db.session.add(person)
+                    db.session.flush()
 
-        for p_name, val in seed_data:
-            person = Person.query.filter_by(name=p_name).first()
-            if not person:
-                person = Person(name=p_name, sort_order=0)
-                db.session.add(person)
-                db.session.flush()
+                conj = Conjugation(verb=verb, tense=tense, person=person, value=val)
+                db.session.add(conj)
 
-            conj = Conjugation(verb=verb, tense=tense, person=person, value=val)
-            db.session.add(conj)
-
-        db.session.commit()
-        logger.info("Default data seeded successfully.")
-    except Exception as e:
-        db.session.rollback()
-        logger.error("Failed to seed default data: %s", e)
+            db.session.commit()
+            logger.info("Default data seeded successfully.")
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Failed to seed default data: %s", e)
