@@ -38,8 +38,14 @@
         id="scrapeForm"
         x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
       >
-        <input type="hidden" name="verb" :value="verb" />
-        <input type="hidden" name="mode" :value="selectedModes[0]" />
+        <!-- Dynamically generate hidden inputs for all selections -->
+        <template x-for="m in selectedModes" :key="'hidden-mode-' + m">
+          <input type="hidden" name="mode" :value="m" />
+        </template>
+
+        <template x-for="t in selectedTenses" :key="'hidden-tense-' + t">
+          <input type="hidden" name="tense" :value="t" />
+        </template>
         <input type="hidden" name="tense" :value="selectedTenses[0]" />
         <input type="hidden" name="filename" :value="filename" />
 
@@ -91,7 +97,6 @@
                   Tense Selection
                 </legend>
                 <button
-                  x-show="multiScrape"
                   type="button"
                   class="btn btn-link btn-sm p-0 text-decoration-none text-white fw-bold text-nowrap ms-2"
                   @click="toggleAllTenses()"
@@ -244,25 +249,24 @@
         return Array.from(tenses);
       },
       toggleMode(m) {
-        if (!this.multiScrape) {
-          this.selectedModes = [m];
+        if (this.selectedModes.includes(m)) {
+          if (this.selectedModes.length > 1) {
+            this.selectedModes = this.selectedModes.filter((i) => i !== m);
+          }
         } else {
-          this.selectedModes.includes(m)
-            ? this.selectedModes.length > 1 &&
-              (this.selectedModes = this.selectedModes.filter((i) => i !== m))
-            : this.selectedModes.push(m);
+          this.selectedModes.push(m);
         }
         this.selectedTenses = this.selectedTenses.filter((t) =>
           this.availableTenses.includes(t),
         );
       },
       toggleTense(t) {
-        if (!this.multiScrape) {
-          this.selectedTenses = [t];
+        if (this.selectedTenses.includes(t)) {
+          if (this.selectedTenses.length > 1) {
+            this.selectedTenses = this.selectedTenses.filter((i) => i !== t);
+          }
         } else {
-          this.selectedTenses.includes(t)
-            ? (this.selectedTenses = this.selectedTenses.filter((i) => i !== t))
-            : this.selectedTenses.push(t);
+          this.selectedTenses.push(t);
         }
       },
       toggleAllTenses() {
