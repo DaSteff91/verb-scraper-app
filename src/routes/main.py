@@ -41,18 +41,19 @@ def index() -> Union[str, WerkzeugResponse]:
     Handle the main dashboard and single-verb scraping form.
 
     Displays the search dashboard on GET requests. On POST requests, it
-    sanitizes input, triggers the lazy-loaded scraping service for a
-    single verb, and redirects to the individual results page.
+    sanitizes input, validates multiple grammatical selections, triggers
+    the batch processing service, and redirects to the summary view.
 
     Returns:
         Union[str, WerkzeugResponse]: The rendered index HTML template
-            or a redirect to the results view.
+            or a redirect to the batch results view.
     """
     if request.method == "POST":
         # 1. Extract raw form data
+        # Use getlist to capture multiple selections from the AlpineJS UI
         verb_raw: str = request.form.get("verb", "").strip()
-        mode: str = request.form.get("mode", "Indicativo")
-        tense: str = request.form.get("tense", "Presente")
+        modes: List[str] = request.form.getlist("mode")
+        tenses: List[str] = request.form.getlist("tense")
         custom_filename: str = request.form.get("filename", "").strip()
 
         # 2. Validate Input
@@ -60,37 +61,68 @@ def index() -> Union[str, WerkzeugResponse]:
             flash("Invalid verb format. Use letters and hyphens.", "danger")
             return render_template("index.html")
 
-        if not InputValidator.is_valid_grammar(mode, tense):
-            flash("Invalid grammatical selection detected.", "danger")
+        if not modes or not tenses:
+            flash("Please select at least one mode and one tense.", "warning")
             return render_template("index.html")
 
-        # 3. Sanitize and prepare
+        # 3. Sanitize and prepare task list
         verb_infinitive: str = verb_raw.lower()
+        tasks: List[Dict[str, str]] = []
 
-        # 4. Lazy Import and Scrape
+        for mode in modes:
+            for tense in tenses:
+                # Only add combinations that are grammatically valid
+                if InputValidator.is_valid_grammar(mode, tense):
+                    tasks.append(
+                        {"verb": verb_infinitive, "mode": mode, "tense": tense}
+                    )
+
+        if not tasks:
+            flash("No valid grammatical combinations were selected.", "danger")
+            return render_template("index.html")
+
+        # 4. Lazy Import and Process Batch
         from src.services.verb_manager import VerbManager
 
         manager: VerbManager = VerbManager()
-        success: bool = manager.get_or_create_verb_data(verb_infinitive, mode, tense)
+        summary: Dict[str, int] = manager.process_batch(tasks)
 
-        if success:
-            logger.info("Successfully processed verb: %s", verb_infinitive)
+        success_count = summary.get("success", 0)
+        failed_count = summary.get("failed", 0)
+
+        if success_count > 0:
+            logger.info(
+                "Successfully processed %d combinations for verb: %s",
+                success_count,
+                verb_infinitive,
+            )
+
+            if failed_count > 0:
+                flash(
+                    f"Scraped {success_count} forms, but {failed_count} failed.",
+                    "warning",
+                )
+
             filename = (
                 custom_filename if custom_filename else f"{verb_infinitive}_export"
             )
 
+            # Redirect to results_batch to show the accordion of all selected tenses
             return redirect(
                 url_for(
-                    "main.results",
-                    verb_infinitive=verb_infinitive,
-                    mode=mode,
-                    tense=tense,
+                    "main.results_batch",
+                    tasks=json.dumps(tasks),
                     filename=filename,
                 )
             )
 
-        logger.warning("Failed to process verb: %s", verb_infinitive)
-        flash(f"Could not find the verb '{verb_infinitive}'", "danger")
+        logger.warning(
+            "Failed to process any combinations for verb: %s", verb_infinitive
+        )
+        flash(
+            f"Could not find the verb '{verb_infinitive}' for the selected tenses.",
+            "danger",
+        )
 
     return render_template("index.html")
 
