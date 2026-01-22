@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.21.0 (2026-01-22)
+
+### Features
+
+- **enable-multi-selection-for-modes-and-tenses-in-single-scrape-mode**: - Refactor AlpineJS toggle
+  logic to support arrays in all view modes
+  ([`d37ef32`](https://github.com/DaSteff91/verb-scraper-app/commit/d37ef327bd366b157743bd27d75b5133450ee5a2))
+
+
 ## v1.20.1 (2026-01-22)
 
 ### Bug Fixes
