@@ -6,6 +6,7 @@ results from the database.
 """
 
 import io
+import os
 import json
 import logging
 from typing import Any, Dict, List, Union, cast
@@ -92,6 +93,19 @@ def index() -> Union[str, WerkzeugResponse]:
         flash(f"Could not find the verb '{verb_infinitive}'", "danger")
 
     return render_template("index.html")
+
+
+@main_bp.route("/favicon.ico")
+def favicon() -> WerkzeugResponse:
+    """
+    Handle the root favicon request made by browsers.
+    Serves the icon directly from the static/image directory
+    """
+    image_dir = os.path.join(cast(str, current_app.static_folder), "image")
+
+    return send_from_directory(
+        image_dir, "favicon.ico", mimetype="image/vnd.microsoft.icon"
+    )
 
 
 @main_bp.route("/results/<verb_infinitive>")
