@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.20.1 (2026-01-22)
+
+### Bug Fixes
+
+- **favicon-wasn´t-visible-anymore-after-changing-to-deep-link-UI-architecture**: Adding a specific
+  route to point to the favicon in order to serve it to the browser
+  ([`924f4f4`](https://github.com/DaSteff91/verb-scraper-app/commit/924f4f41e8c3d20f0a40fe7ce1371146f3b0b89b))
+
+### Testing
+
+- **implement-dual-source-failover-system-with-live-contract-tests**: Adding new tests
+  ([`f9dac26`](https://github.com/DaSteff91/verb-scraper-app/commit/f9dac26dfc135bb2810fb62fed6d41d51d88a2e5))
+
+
 ## v1.20.0 (2026-01-21)
 
 ### Features
