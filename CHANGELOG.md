@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.22.1 (2026-01-24)
+
+### Bug Fixes
+
+- **wording-issue-in-a-test**: Correction of the wording
+  ([`5cf782e`](https://github.com/DaSteff91/verb-scraper-app/commit/5cf782e68cd0a4c967137b33d28152d3b9e5120f))
+
+
 ## v1.22.0 (2026-01-24)
 
 ### Features
