@@ -2,6 +2,16 @@
 
 <!-- version list -->
 
+## v1.22.0 (2026-01-24)
+
+### Features
+
+- **updated-the-name-of-the-app-as-well-as-some-layout-and-content**: Nothing to fancy - replace
+  verb scraper with portuguese conjugation scraper, added a logo to the header and links into the
+  footer
+  ([`b17df87`](https://github.com/DaSteff91/verb-scraper-app/commit/b17df874d8b5352b290a95b4ca8c364d155cec7e))
+
+
 ## v1.21.0 (2026-01-22)
 
 ### Features
