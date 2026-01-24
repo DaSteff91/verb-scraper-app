@@ -29,7 +29,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     # 2. Configure Logging
     logging.basicConfig(level=log_level, format=log_format)
     logger = logging.getLogger(__name__)
-    logger.info("Initializing Verb Scraper v%s", __version__)
+    logger.info("Initializing Portuguese Conjugation Scraper v%s", __version__)
 
     # 3. Use type: ignore for Flask-SQLAlchemy's dynamic methods
     db.init_app(app)  # type: ignore
@@ -41,7 +41,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
         db.create_all()  # type: ignore
         logger.info("Database synchronized.")
-        logger.info("Verb Scraper v%s initialized.", __version__)
+        logger.info("Portuguese Conjugation Scraper v%s initialized.", __version__)
 
         from src.services.verb_manager import VerbManager
 

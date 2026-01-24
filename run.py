@@ -1,5 +1,5 @@
 """
-Main entry point for the Verb Scraper application.
+Main entry point for the Portuguese Conjugation Scraper application.
 
 This script initializes the Flask app using the factory pattern
 and starts the development server.

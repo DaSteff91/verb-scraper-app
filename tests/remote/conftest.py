@@ -2,7 +2,7 @@
 Configuration for Remote API Testing.
 
 This module provides fixtures for interacting with a deployed instance
-of the Verb Scraper API.
+of the Portuguese Conjugation Scraper API.
 """
 
 import os

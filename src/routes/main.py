@@ -1,5 +1,5 @@
 """
-Main routes (Controller) for the Verb Scraper application.
+Main routes (Controller) for the Portuguese Conjugation Scraper application.
 
 This module handles the UI requests for scraping verbs and displaying
 results from the database.

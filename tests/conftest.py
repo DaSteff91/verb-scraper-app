@@ -2,7 +2,7 @@
 Global Pytest Configuration and Fixtures.
 
 This module defines the fixtures required for testing the Flask application,
-including the app instance, database setup, mock data loaders and a deployed instance of the Verb Scraper API.
+including the app instance, database setup, mock data loaders and a deployed instance of the Portuguese Conjugation Scraper API.
 """
 
 import os
