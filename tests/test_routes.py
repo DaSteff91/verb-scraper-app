@@ -38,7 +38,7 @@ def test_scrape_form_submission_success(
 
     # Check that we landed on the results page
     assert response.status_code == 200
-    assert b"Conjugation Results" in response.data
+    assert b"Batch Scrape Summary" in response.data
     assert b"falar" in response.data
     assert b"eu falo" in response.data
 
