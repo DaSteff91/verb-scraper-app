@@ -62,7 +62,9 @@ class AnkiExporter:
 
         # 2. Replicate format logic
         formatted_conjugations: str = "\n".join(filtered_list)
-        tag: str = f"{mode_name} {tense_name}"
+        normalized_mode = mode_name.replace(" ", "-")
+        normalized_tense = tense_name.replace(" ", "-")
+        tag: str = f"{normalized_mode}_{normalized_tense}"
 
         # 3. Export to string buffer (In-memory)
         output: io.StringIO = io.StringIO()
@@ -110,7 +112,9 @@ class AnkiExporter:
 
             if filtered_list:
                 formatted_conjs = "\n".join(filtered_list)
-                tag = f"{mode} {tense}".strip()
+                normalized_m = mode.replace(" ", "-")
+                normalized_t = tense.replace(" ", "-")
+                tag = f"{normalized_m} {normalized_t}"
                 writer.writerow([verb_inf, formatted_conjs, tag])
 
         return output.getvalue()
