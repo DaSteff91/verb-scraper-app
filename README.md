@@ -84,22 +84,190 @@ verb-scraper-app/
   - **Anki Integration:** CSV generation using byte-streams with UTF-8-SIG encoding for direct import into flashcard software.
   - **Native Formatting:** Supports newline-separated values within CSV fields for card styling.
 
-## API Documentation
+## API Documentation (v1)
+
+The API allows for programmatic access to the verb database and the scraping engine. All endpoints require a valid API Key.
 
 ### Authentication
 
-Include the following header in all requests:
-`X-API-KEY: <your_configured_key>`
+All requests must include the following header: `X-API-KEY: <your_api_key>`
+For the public available version just contact me [stefan@kite-engineer.de](stefan@kite-engineer.de)
+
+---
 
 ### Endpoints
 
-- `GET /api/v1/verbs/<infinitive>`: Retrieve stored conjugations.
-  - `dialect=br|pt`: Filter out 2nd person forms.
-  - `anki=true`: Return a formatted CSV string in the JSON response.
-- `POST /api/v1/scrape`: Synchronous trigger for a single verb/mode/tense combination.
-- `POST /api/v1/batch`: Submit a list of tasks for background processing. Returns 202 and a Job ID.
-- `GET /api/v1/batch/<job_id>`: Check progress of a background task.
-- `GET /api/v1/health`: System diagnostic report.
+#### 1. Retrieve Stored Conjugations
+
+`GET /api/v1/verbs/<infinitive>`
+
+Fetches data currently stored in the local database.
+
+| Parameter | Type    | Default | Description                                       |
+| :-------- | :------ | :------ | :------------------------------------------------ |
+| `mode`    | string  | `null`  | Filter by mode (e.g., `Indicativo`).              |
+| `tense`   | string  | `null`  | Filter by tense (e.g., `Presente`).               |
+| `dialect` | string  | `br`    | `br` (skips tu/vós) or `pt` (includes all).       |
+| `anki`    | boolean | `false` | Set `true` to include a pre-formatted CSV string. |
+
+**Example Request:**
+
+```bash
+curl -H "X-API-KEY: my_secret_token" \
+     "https://conjugator.kite-engineer.de/api/v1/verbs/comer?mode=Indicativo&tense=Presente&dialect=pt&anki=true"
+```
+
+**Example Response:**
+
+```json
+{
+  "infinitive": "comer",
+  "dialect": "European (standard)",
+  "scraped_at": "2026-01-22T16:55:00Z",
+  "conjugations": [
+    {
+      "person": "eu",
+      "value": "eu como",
+      "mode": "Indicativo",
+      "tense": "Presente"
+    },
+    {
+      "person": "tu",
+      "value": "tu comes",
+      "mode": "Indicativo",
+      "tense": "Presente"
+    }
+    /* ... rest of the forms */
+  ],
+  "anki_string": "\"comer\",\"eu como\\ntu comes...\",\"Indicativo Presente\""
+}
+```
+
+---
+
+#### 2. Trigger Synchronous Scrape
+
+`POST /api/v1/scrape`
+
+Forces the server to scrape a specific verb/mode/tense combination immediately.
+
+**Example Request:**
+
+```bash
+curl -X POST -H "X-API-KEY: my_secret_token" \
+     -H "Content-Type: application/json" \
+     -d '{"verb": "falar", "mode": "Indicativo", "tense": "Presente"}' \
+     "https://conjugator.kite-engineer.de/api/v1/scrape"
+```
+
+---
+
+#### 3. Submit Asynchronous Batch
+
+`POST /api/v1/batch`
+
+Submits multiple verbs for background processing. Returns a `job_id` for tracking.
+
+**Example Request:**
+
+```bash
+curl -X POST -H "X-API-KEY: my_secret_token" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "tasks": [
+             {"verb": "ir", "mode": "Subjuntivo", "tense": "Futuro"},
+             {"verb": "sentir", "mode": "Indicativo", "tense": "Presente"}
+           ]
+         }' \
+     "https://conjugator.kite-engineer.de/api/v1/batch"
+```
+
+**Response (202 Accepted):**
+
+```json
+{
+  "status": "accepted",
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "check_status_url": "/api/v1/batch/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+---
+
+#### 4. Check Batch Status
+
+`GET /api/v1/batch/<job_id>`
+
+Polls the progress of a background job.
+
+**Example Request:**
+
+```bash
+curl -H "X-API-KEY: my_secret_token" \
+     "https://conjugator.kite-engineer.de/api/v1/batch/550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Response:**
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "processing",
+  "progress": {
+    "total": 2,
+    "success": 1,
+    "failed": 0
+  },
+  "created_at": "2026-01-22T17:00:00Z"
+}
+```
+
+---
+
+#### 5. Health Check
+
+`GET /api/v1/health`
+
+Returns diagnostic info about DB connectivity and storage.
+
+**Example Response:**
+
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "database": "ok",
+    "storage": "ok",
+    "readiness": "ok"
+  }
+}
+```
+
+### Data Constraints & Supported Grammar
+
+To ensure successful scraping and database integrity, all inputs are passed through a strict validation layer.
+
+#### 1. Verb Formatting Rules
+
+When providing a verb (the `infinitive` parameter), it must adhere to the following:
+
+- **Form:** Must be the **infinitive** form (e.g., `falar`, not `falo`).
+- **Characters:** Supports standard Portuguese letters, including accents (`á`, `ê`, `í`, `õ`) and the cedilla (`ç`).
+- **Reflexives:** Hyphens are permitted for reflexive verbs (e.g., `pôr-se`).
+- **Length:** Maximum of **20 characters**.
+- **Prohibited:** No numbers, symbols, or special characters (e.g., `!`, `@`, `#`, `$`, `.`, `/`).
+
+#### 2. Supported Grammatical Modes & Tenses
+
+The `mode` and `tense` parameters must exactly match the whitelist below (case-sensitive):
+
+| Mode (`mode`)  | Available Tenses (`tense`)                                                                                                           |
+| :------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Indicativo** | `Presente`, `Pretérito Imperfeito`, `Pretérito Perfeito`, `Pretérito Mais-que-perfeito`, `Futuro do Presente`, `Futuro do Pretérito` |
+| **Subjuntivo** | `Presente`, `Pretérito Imperfeito`, `Futuro`                                                                                         |
+| **Imperativo** | `Afirmativo`, `Negativo`                                                                                                             |
+
+> **Note:** If a requested mode/tense combination does not exist on the external provider for a specific irregular verb, the API will return a `500` error (via Scrape) or a `fail` count (via Batch).
 
 ## Local Development Setup
 
