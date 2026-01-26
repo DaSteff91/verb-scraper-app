@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.22.2 (2026-01-26)
+
+### Bug Fixes
+
+- **better-describe-the-usage-of-the-available-apis**: Editing the readme.md to have a clear step by
+  step description on how to use the api and what to expect as response
+  ([`f86c7dd`](https://github.com/DaSteff91/verb-scraper-app/commit/f86c7dd4addd9536880b058334f45fc7f616c1be))
+
+
 ## v1.22.1 (2026-01-24)
 
 ### Bug Fixes
