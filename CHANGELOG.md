@@ -2,6 +2,34 @@
 
 <!-- version list -->
 
+## v1.23.0 (2026-01-26)
+
+### Bug Fixes
+
+- **bypass-production-URL-length-limits-in-bulk-importer**: - Implement safe sub-chunking to
+  download CSV data verb-by-verb
+  ([`4a243c2`](https://github.com/DaSteff91/verb-scraper-app/commit/4a243c27011dca15fdce6506b73d6c9dcd940d19))
+
+- **tags-were-seperatedly-imported-in-anki-since-there-was-a-white-space-between-them**: Replaced
+  the white space with -
+  ([`8d00307`](https://github.com/DaSteff91/verb-scraper-app/commit/8d00307fe54b96bbf6f39c5c1be6888d024a3745))
+
+- **update-the-gitignor-exports-must-not-be-published**: Update gitignor
+  ([`2e145cf`](https://github.com/DaSteff91/verb-scraper-app/commit/2e145cfdd627eb8fc92df408bfc43cf2b9763522))
+
+### Features
+
+-
+  **adding-a-standalone-script-that-can-scrape-from-an-external-file-that-has-comma-separated-verbs-inside**:
+  Provided a new directory to handle stuff related to the script
+  ([`c5b6928`](https://github.com/DaSteff91/verb-scraper-app/commit/c5b69281f793aee05a998292e9df442c46352461))
+
+-
+  **providing-an-independent-script-that-can-be-used-to-scrape-via-the-provided-api-with-a-given-inputfile**:
+  Outline the new repo structure based on the needs and populate the scraper with a test script
+  ([`2ef0f63`](https://github.com/DaSteff91/verb-scraper-app/commit/2ef0f635b106e2691aa266a882d7e7090fe540a5))
+
+
 ## v1.22.2 (2026-01-26)
 
 ### Bug Fixes
