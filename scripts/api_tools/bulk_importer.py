@@ -94,42 +94,54 @@ class BulkImporter:
         logger.info("Generated task matrix: %d total tasks.", len(all_tasks))
         return all_tasks
 
-    def fetch_chunk_csv(
+    def fetch_chunk_csv_safely(
         self, session: requests.Session, tasks: List[Dict[str, str]]
     ) -> None:
         """
-        Download the CSV portion for a specific chunk and store it in memory.
-        """
-        endpoint = f"{self.base_url}/export-batch"
-        params = {
-            "tasks": json.dumps(tasks),
-            "filename": "temp_chunk",
-            "skip_tu_vos": "true",
-        }
-        try:
-            # We call the GET route with a limited chunk size to avoid 414 errors
-            response = session.get(endpoint, params=params, timeout=30)
-            response.raise_for_status()
+        Downloads CSV data in 'Safe Sub-Chunks' (one verb at a time).
 
-            # Strip the UTF-8 BOM (\ufeff) if present to avoid multiple BOMs in merged file
-            csv_content = response.text.lstrip("\ufeff")
-            if csv_content.strip():
-                self.csv_accumulator.append(csv_content)
-                logger.debug("Chunk CSV added to accumulator.")
-        except Exception as e:
-            logger.error("Failed to download CSV chunk: %s", e)
+        This prevents the '400 Bad Request / URL Too Large' error on
+        production servers by ensuring each GET request has a short URI.
+        """
+        # A single verb has len(GRAMMAR_MATRIX) tasks
+        sub_step = len(self.GRAMMAR_MATRIX)
+
+        for i in range(0, len(tasks), sub_step):
+            # sub_tasks contains exactly 11 tasks for 1 verb
+            sub_tasks = tasks[i : i + sub_step]
+            current_verb = sub_tasks[0]["verb"]
+
+            endpoint = f"{self.base_url}/export-batch"
+            params = {
+                "tasks": json.dumps(sub_tasks),
+                "filename": f"export_{current_verb}",
+                "skip_tu_vos": "true",
+            }
+
+            try:
+                response = session.get(endpoint, params=params, timeout=20)
+                response.raise_for_status()
+
+                # Strip the BOM (\ufeff) to ensure clean merging
+                clean_csv = response.text.lstrip("\ufeff")
+                if clean_csv.strip():
+                    self.csv_accumulator.append(clean_csv)
+            except Exception as e:
+                logger.error(
+                    "Failed to download CSV for verb '%s': %s", current_verb, e
+                )
 
     def process_chunk(
         self, session: requests.Session, tasks: List[Dict[str, str]]
     ) -> bool:
-        """Submit a chunk as a background job and poll for completion."""
+        """Submit a background job and poll for completion."""
         endpoint = f"{self.base_url}/api/v1/batch"
         try:
             response = session.post(endpoint, json={"tasks": tasks}, timeout=10)
             response.raise_for_status()
             job_id = response.json()["job_id"]
             status_url = f"{self.base_url}/api/v1/batch/{job_id}"
-            logger.info("Batch Job [%s] started. Polling...", job_id)
+            logger.info("Polling Job [%s] for %d tasks...", job_id, len(tasks))
         except Exception as e:
             logger.error("Submission failed: %s", e)
             return False
@@ -140,27 +152,18 @@ class BulkImporter:
                 poll_resp.raise_for_status()
                 info = poll_resp.json()
 
-                status = info["status"]
-                progress = info["progress"]
-
-                if status == "completed":
-                    if progress["failed"] > 0:
-                        logger.warning(
-                            "Job %s had %d failures.", job_id, progress["failed"]
-                        )
+                if info["status"] == "completed":
+                    if info["progress"]["failed"] > 0:
                         self.failed_jobs.append(job_id)
 
-                    # DOWNLOAD CHUNK IMMEDIATELY UPON COMPLETION
-                    self.fetch_chunk_csv(session, tasks)
+                    self.fetch_chunk_csv_safely(session, tasks)
                     return True
 
-                if status == "failed":
-                    logger.error("Job %s failed completely.", job_id)
+                if info["status"] == "failed":
                     return False
-
                 time.sleep(3)
             except Exception as e:
-                logger.error("Polling error for job %s: %s", job_id, e)
+                logger.error("Polling error: %s", e)
                 time.sleep(5)
 
     def save_final_merged_csv(self, filename: str) -> None:
@@ -180,46 +183,34 @@ class BulkImporter:
 
         logger.info("SUCCESS: Consolidated CSV saved to: %s", file_path)
 
-    def execute_import(self, verbs: List[str], verbs_per_batch: int = 10) -> None:
-        """Orchestrate the full loop: Chunk -> Scrape -> Fetch CSV -> Merge."""
+    def execute_import(self, verbs: List[str], verbs_per_batch: int = 20) -> None:
+        """Orchestrate the full loop: Chunk -> Scrape -> Download -> Save."""
         session = self._get_session()
         all_tasks = self.generate_task_matrix(verbs)
-
-        # Calculate chunk size (verbs * grammar matrix entries)
         chunk_step = verbs_per_batch * len(self.GRAMMAR_MATRIX)
-        total_tasks = len(all_tasks)
 
-        logger.info("Starting execution for %d verbs...", len(verbs))
+        logger.info("Starting execution for %d verbs at %s", len(verbs), self.base_url)
 
-        for i in range(0, total_tasks, chunk_step):
+        for i in range(0, len(all_tasks), chunk_step):
             chunk = all_tasks[i : i + chunk_step]
-            current_chunk_num = (i // chunk_step) + 1
-            total_chunks = (total_tasks + chunk_step - 1) // chunk_step
+            curr_epoch = (i // chunk_step) + 1
+            total_epochs = (len(all_tasks) + chunk_step - 1) // chunk_step
 
-            logger.info("Processing Chunk %d/%d...", current_chunk_num, total_chunks)
+            logger.info(">>> Processing Epoch %d/%d...", curr_epoch, total_epochs)
             self.process_chunk(session, chunk)
-
-            # Cool-down to prevent rate-limiting on target websites
             time.sleep(2)
 
         # Merge and save
         ts = datetime.now().strftime("%Y%m%d_%H%M")
         self.save_final_merged_csv(f"bulk_export_{ts}")
 
-        # Final terminal summary
-        print("\n" + "=" * 30)
-        print("FINAL IMPORT REPORT")
-        print("=" * 30)
-        print(f"Verbs Processed:      {len(verbs)}")
-        print(f"Total Tasks:          {total_tasks}")
-        print(f"Jobs with Issues:     {len(self.failed_jobs)}")
-        if self.failed_jobs:
-            print(f"IDs: {', '.join(self.failed_jobs)}")
+        print("\n" + "=" * 30 + "\nFINAL IMPORT REPORT\n" + "=" * 30)
+        print(f"Total Verbs:      {len(verbs)}")
+        print(f"Jobs with Issues: {len(self.failed_jobs)}")
         print("=" * 30)
 
 
 if __name__ == "__main__":
-    # Path configuration
     SCRIPT_DIR = Path(__file__).resolve().parent
     ROOT_DIR = SCRIPT_DIR.parent.parent
     DATA_FILE = SCRIPT_DIR / "295_irregular_portuguese_verbs.txt"
@@ -230,7 +221,7 @@ if __name__ == "__main__":
 
         if target_verbs:
             # Change to verbs_per_batch=20 when running on production
-            importer.execute_import(target_verbs, verbs_per_batch=10)
+            importer.execute_import(target_verbs, verbs_per_batch=20)
 
     except Exception as exc:
         logger.error("Initialization error: %s", exc)

@@ -355,7 +355,7 @@ Within the script's `main` block, you can adjust the intensity:
 
 ```text
 scripts/
-├── exports/
+├── exports/                   # Default storage path for the exported .csv
 ├── api_tools/
 │   ├── bulk_importer.py       # API Client Orchestrator
 │   └── irregular_verbs.txt    # Data source for bulk runs
