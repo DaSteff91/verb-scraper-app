@@ -25,3 +25,5 @@ build/
 .coverage
 coverage.xml
 scripts/api_tools/exports
+scripts/api_tools/exports/bulk_export_20260126_0914.csv
+scripts/api_tools/exports/bulk_export_20260126_1511.csv

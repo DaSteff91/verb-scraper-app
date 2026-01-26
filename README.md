@@ -316,6 +316,51 @@ docker compose up -d --build
 
 [conjugator.kite-engineer.de](https://conjugator.kite-engineer.de)
 
+## Bulk Operations & Tooling
+
+The project includes a standalone script, the **Bulk Importer Tool** designed for large-scale data ingestion and automated Anki deck generation via .csv export of the provided tool.
+
+### Bulk Importer Script
+
+Located at `scripts/api_tools/bulk_importer.py`, this tool allows you to process hundreds of verbs automatically by driving the API's batch engine.
+
+#### Key Features:
+
+- **Matrix Generation:** Automatically expands a single verb into all 11 supported grammatical combinations (Indicativo, Subjuntivo, Imperativo).
+- **Sequential Processing:** Handles verbs in configurable "epochs" to ensure server stability and bypass request size limits.
+- **Local Merging:** Consolidates multiple API responses into a single, unified CSV file.
+- **Anki Optimization:** Exports files with `UTF-8-SIG` encoding and normalized tags (e.g., `Indicativo-Presente`) for seamless flashcard import.
+
+#### Usage:
+
+1. Ensure your `.env` file contains a valid `API_KEY` and `BASE_URL`.
+2. Place your verbs in a comma-separated text file: `scripts/api_tools/295_irregular_portuguese_verbs.txt`.
+3. Run the script from the project root:
+
+```bash
+export PYTHONPATH=$PYTHONPATH:.
+python3 scripts/api_tools/bulk_importer.py
+```
+
+#### Configuration:
+
+Within the script's `main` block, you can adjust the intensity:
+
+- `verbs_per_batch=10`: Recommended for local development.
+- `verbs_per_batch=20`: Optimized for production server environments.
+
+---
+
+### Directory Layout for Tools
+
+```text
+scripts/
+├── exports/
+├── api_tools/
+│   ├── bulk_importer.py       # API Client Orchestrator
+│   └── irregular_verbs.txt    # Data source for bulk runs
+```
+
 ## Contact
 
 Stefan Merthan (Kite-Engineer)

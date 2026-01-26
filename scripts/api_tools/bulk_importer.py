@@ -1,20 +1,20 @@
 """
 Bulk API Importer Tool.
 
-This script acts as a high-level client for the Verb Scraper API,
-orchestrating the scraping of hundreds of verbs across all supported
-grammatical modes and tenses.
+Orchestrates the scraping of hundreds of verbs via the REST API and
+consolidates the results into a single Anki-ready CSV file. Handles
+chunking and local merging to avoid URL length limitations.
 """
 
-import os
-import logging
-import time
-import requests
 import json
+import logging
+import os
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, List, Optional, Set
 
+import requests
 from dotenv import load_dotenv
 
 # Initialize logging for the standalone script
@@ -26,72 +26,40 @@ logger = logging.getLogger(__name__)
 
 class BulkImporter:
     """
-    Handles file ingestion and task matrix generation for the API.
+    Handles file ingestion, task matrix generation, and incremental
+    CSV merging from the Verb Scraper API.
     """
 
-    # Constants representing the "Gold Standard" coverage for every verb
+    # The "Gold Standard" coverage for every verb
     GRAMMAR_MATRIX: List[Dict[str, str]] = [
-        # Indicativo
         {"mode": "Indicativo", "tense": "Presente"},
         {"mode": "Indicativo", "tense": "Pretérito Imperfeito"},
         {"mode": "Indicativo", "tense": "Pretérito Perfeito"},
         {"mode": "Indicativo", "tense": "Pretérito Mais-que-perfeito"},
         {"mode": "Indicativo", "tense": "Futuro do Presente"},
         {"mode": "Indicativo", "tense": "Futuro do Pretérito"},
-        # Subjuntivo
         {"mode": "Subjuntivo", "tense": "Presente"},
         {"mode": "Subjuntivo", "tense": "Pretérito Imperfeito"},
         {"mode": "Subjuntivo", "tense": "Futuro"},
-        # Imperativo
-        {"mode": "Imperativo", "tense": "Afirmativo"},
-        {"mode": "Imperativo", "tense": "Negativo"},
     ]
 
     def __init__(self, env_path: Path) -> None:
         """
-        Initialize with environment variables for API communication.
+        Initialize the importer with API credentials and state tracking.
+
+        Args:
+            env_path: Path to the .env file containing API_KEY and BASE_URL.
         """
         load_dotenv(dotenv_path=env_path)
         self.api_key: str = os.getenv("API_KEY", "")
         self.base_url: str = os.getenv("BASE_URL", "http://localhost:5000").rstrip("/")
-        self.failed_jobs: List[str] = []
-        self.successful_tasks: List[Dict[str, str]] = []
 
         if not self.api_key:
             raise ValueError("API_KEY not found in environment.")
 
-    def load_verbs_from_file(self, file_path: Path) -> List[str]:
-        """
-        Parse the comma-separated text file into a unique, sorted list.
-        """
-        if not file_path.exists():
-            logger.error("Verb file not found: %s", file_path)
-            return []
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            raw_content = f.read()
-
-        # Split by comma, strip whitespace, remove empty strings, handle duplicates
-        verb_set: Set[str] = {
-            v.strip().lower() for v in raw_content.split(",") if v.strip()
-        }
-
-        sorted_verbs = sorted(list(verb_set))
-        logger.info("Loaded %d unique verbs from file.", len(sorted_verbs))
-        return sorted_verbs
-
-    def generate_task_matrix(self, verbs: List[str]) -> List[Dict[str, str]]:
-        """
-        Combine every verb with every supported mode/tense.
-        """
-        all_tasks: List[Dict[str, str]] = []
-        for verb in verbs:
-            for combo in self.GRAMMAR_MATRIX:
-                task = {"verb": verb, "mode": combo["mode"], "tense": combo["tense"]}
-                all_tasks.append(task)
-
-        logger.info("Generated task matrix: %d total tasks.", len(all_tasks))
-        return all_tasks
+        self.failed_jobs: List[str] = []
+        # Stores CSV text chunks to avoid 414 URI Too Large errors
+        self.csv_accumulator: List[str] = []
 
     def _get_session(self) -> requests.Session:
         """Create a session with auth headers pre-configured."""
@@ -99,23 +67,71 @@ class BulkImporter:
         session.headers.update({"X-API-KEY": self.api_key})
         return session
 
+    def load_verbs_from_file(self, file_path: Path) -> List[str]:
+        """Parse the comma-separated text file into a unique, sorted list."""
+        if not file_path.exists():
+            logger.error("Verb file not found: %s", file_path)
+            return []
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_content = f.read()
+
+        verb_set: Set[str] = {
+            v.strip().lower() for v in raw_content.split(",") if v.strip()
+        }
+        sorted_verbs = sorted(list(verb_set))
+        logger.info("Loaded %d unique verbs from file.", len(sorted_verbs))
+        return sorted_verbs
+
+    def generate_task_matrix(self, verbs: List[str]) -> List[Dict[str, str]]:
+        """Combine every verb with every supported mode/tense."""
+        all_tasks: List[Dict[str, str]] = []
+        for verb in verbs:
+            for combo in self.GRAMMAR_MATRIX:
+                all_tasks.append(
+                    {"verb": verb, "mode": combo["mode"], "tense": combo["tense"]}
+                )
+        logger.info("Generated task matrix: %d total tasks.", len(all_tasks))
+        return all_tasks
+
+    def fetch_chunk_csv(
+        self, session: requests.Session, tasks: List[Dict[str, str]]
+    ) -> None:
+        """
+        Download the CSV portion for a specific chunk and store it in memory.
+        """
+        endpoint = f"{self.base_url}/export-batch"
+        params = {
+            "tasks": json.dumps(tasks),
+            "filename": "temp_chunk",
+            "skip_tu_vos": "true",
+        }
+        try:
+            # We call the GET route with a limited chunk size to avoid 414 errors
+            response = session.get(endpoint, params=params, timeout=30)
+            response.raise_for_status()
+
+            # Strip the UTF-8 BOM (\ufeff) if present to avoid multiple BOMs in merged file
+            csv_content = response.text.lstrip("\ufeff")
+            if csv_content.strip():
+                self.csv_accumulator.append(csv_content)
+                logger.debug("Chunk CSV added to accumulator.")
+        except Exception as e:
+            logger.error("Failed to download CSV chunk: %s", e)
+
     def process_chunk(
         self, session: requests.Session, tasks: List[Dict[str, str]]
     ) -> bool:
-        """
-        Send a chunk of tasks to the API and wait for completion.
-        """
+        """Submit a chunk as a background job and poll for completion."""
         endpoint = f"{self.base_url}/api/v1/batch"
         try:
             response = session.post(endpoint, json={"tasks": tasks}, timeout=10)
             response.raise_for_status()
-            job_data = response.json()
-            job_id = job_data["job_id"]
-            status_url = f"{self.base_url}{job_data['check_status_url']}"
-
-            logger.info("Batch accepted. Job ID: %s. Polling...", job_id)
+            job_id = response.json()["job_id"]
+            status_url = f"{self.base_url}/api/v1/batch/{job_id}"
+            logger.info("Batch Job [%s] started. Polling...", job_id)
         except Exception as e:
-            logger.error("Failed to submit batch: %s", e)
+            logger.error("Submission failed: %s", e)
             return False
 
         while True:
@@ -130,105 +146,91 @@ class BulkImporter:
                 if status == "completed":
                     if progress["failed"] > 0:
                         logger.warning(
-                            "Job %s finished with %d failures.",
-                            job_id,
-                            progress["failed"],
+                            "Job %s had %d failures.", job_id, progress["failed"]
                         )
                         self.failed_jobs.append(job_id)
 
-                    self.successful_tasks.extend(tasks)
+                    # DOWNLOAD CHUNK IMMEDIATELY UPON COMPLETION
+                    self.fetch_chunk_csv(session, tasks)
                     return True
 
                 if status == "failed":
-                    logger.error("Job %s reported a fatal system failure.", job_id)
+                    logger.error("Job %s failed completely.", job_id)
                     return False
 
                 time.sleep(3)
             except Exception as e:
-                logger.error("Polling error: %s", e)
+                logger.error("Polling error for job %s: %s", job_id, e)
                 time.sleep(5)
 
-    def download_anki_export(self, filename: str) -> None:
-        """
-        Request the consolidated CSV from the server and save it locally.
-        """
-        if not self.successful_tasks:
-            logger.warning("No successful tasks to export.")
+    def save_final_merged_csv(self, filename: str) -> None:
+        """Merge all accumulated CSV chunks into one file with a single BOM."""
+        if not self.csv_accumulator:
+            logger.warning("No CSV data to save.")
             return
 
-        logger.info(
-            "Requesting consolidated Anki export for %d tasks...",
-            len(self.successful_tasks),
-        )
+        export_dir = Path(__file__).parent / "exports"
+        export_dir.mkdir(exist_ok=True)
+        file_path = export_dir / f"{filename}.csv"
 
-        # Build the query params for the UI export route
-        # Note: We use the /export-batch route which takes a JSON string of tasks
-        endpoint = f"{self.base_url}/export-batch"
-        params = {
-            "tasks": json.dumps(self.successful_tasks),
-            "filename": filename,
-            "skip_tu_vos": "true",  # Following your Brazilian dialect preference
-        }
+        # Write using UTF-8-SIG to ensure Anki recognizes special characters
+        with open(file_path, "w", encoding="utf-8-sig") as f:
+            for content in self.csv_accumulator:
+                f.write(content)
 
-        try:
-            session = self._get_session()
-            response = session.get(endpoint, params=params, stream=True, timeout=30)
-            response.raise_for_status()
+        logger.info("SUCCESS: Consolidated CSV saved to: %s", file_path)
 
-            # Save file to a new 'exports' directory
-            export_dir = Path(__file__).parent / "exports"
-            export_dir.mkdir(exist_ok=True)
-
-            file_path = export_dir / f"{filename}.csv"
-
-            with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            logger.info("Success! Consolidated export saved to: %s", file_path)
-        except Exception as e:
-            logger.error("Export download failed: %s", e)
-
-    def execute_import(
-        self, all_tasks: List[Dict[str, str]], verbs_per_batch: int = 5
-    ) -> None:
-        """
-        Divide all tasks into chunks, process them, and then trigger the export.
-        """
+    def execute_import(self, verbs: List[str], verbs_per_batch: int = 10) -> None:
+        """Orchestrate the full loop: Chunk -> Scrape -> Fetch CSV -> Merge."""
         session = self._get_session()
-        tasks_per_verb = len(self.GRAMMAR_MATRIX)
-        chunk_size = verbs_per_batch * tasks_per_verb
+        all_tasks = self.generate_task_matrix(verbs)
 
-        for i in range(0, len(all_tasks), chunk_size):
-            chunk = all_tasks[i : i + chunk_size]
+        # Calculate chunk size (verbs * grammar matrix entries)
+        chunk_step = verbs_per_batch * len(self.GRAMMAR_MATRIX)
+        total_tasks = len(all_tasks)
+
+        logger.info("Starting execution for %d verbs...", len(verbs))
+
+        for i in range(0, total_tasks, chunk_step):
+            chunk = all_tasks[i : i + chunk_step]
+            current_chunk_num = (i // chunk_step) + 1
+            total_chunks = (total_tasks + chunk_step - 1) // chunk_step
+
+            logger.info("Processing Chunk %d/%d...", current_chunk_num, total_chunks)
             self.process_chunk(session, chunk)
+
+            # Cool-down to prevent rate-limiting on target websites
             time.sleep(2)
 
-        # Trigger final export
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        self.download_anki_export(f"bulk_export_{timestamp}")
+        # Merge and save
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+        self.save_final_merged_csv(f"bulk_export_{ts}")
 
-        # Print Final Report
+        # Final terminal summary
         print("\n" + "=" * 30)
         print("FINAL IMPORT REPORT")
         print("=" * 30)
-        print(f"Total Verbs Processed: {len(all_tasks) // tasks_per_verb}")
-        print(f"Total Tasks:          {len(all_tasks)}")
+        print(f"Verbs Processed:      {len(verbs)}")
+        print(f"Total Tasks:          {total_tasks}")
         print(f"Jobs with Issues:     {len(self.failed_jobs)}")
         if self.failed_jobs:
-            print(f"Failed Job IDs:       {', '.join(self.failed_jobs)}")
+            print(f"IDs: {', '.join(self.failed_jobs)}")
         print("=" * 30)
 
 
 if __name__ == "__main__":
-    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-    DATA_FILE = Path(__file__).parent / "295_irregular_portuguese_verbs.txt"
+    # Path configuration
+    SCRIPT_DIR = Path(__file__).resolve().parent
+    ROOT_DIR = SCRIPT_DIR.parent.parent
+    DATA_FILE = SCRIPT_DIR / "295_irregular_portuguese_verbs.txt"
 
-    importer = BulkImporter(env_path=ROOT_DIR / ".env")
-    verb_list = importer.load_verbs_from_file(DATA_FILE)
+    try:
+        importer = BulkImporter(env_path=ROOT_DIR / ".env")
+        target_verbs = importer.load_verbs_from_file(DATA_FILE)
 
-    # 2-verb test slice
-    test_tasks = importer.generate_task_matrix(verb_list[:2])
+        if target_verbs:
+            # Change to verbs_per_batch=20 when running on production
+            importer.execute_import(target_verbs, verbs_per_batch=10)
 
-    # Execute (Verbs per batch = 1, so we see the sequential logic twice)
-    importer.execute_import(test_tasks, verbs_per_batch=1)
+    except Exception as exc:
+        logger.error("Initialization error: %s", exc)
