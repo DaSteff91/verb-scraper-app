@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.23.1 (2026-02-01)
+
+### Bug Fixes
+
+- **typo-after-going-to-concatinated-tags**: Fixing tests to consider _ in tags now as true
+  ([`4400903`](https://github.com/DaSteff91/verb-scraper-app/commit/440090329c6b507e616a9da704fe34f9397a8fb8))
+
+
 ## v1.23.0 (2026-01-26)
 
 ### Bug Fixes
