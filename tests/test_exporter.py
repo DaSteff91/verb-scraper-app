@@ -39,7 +39,7 @@ def test_generate_verb_csv_all_persons(app) -> None:
     # Note: Pandas adds quotes when it sees a newline
     assert '"falo\nfalas"' in csv_output
     # Column C: Tags
-    assert "Indicativo Presente" in csv_output
+    assert "Indicativo_Presente" in csv_output
 
 
 def test_generate_verb_csv_skip_tu_vos(app) -> None:
@@ -112,7 +112,7 @@ def test_generate_verb_csv_structural_integrity(app) -> None:
     assert forms[5] == "form_5"
 
     # D. Verify Column C (The Tag):
-    assert row[2] == "Indicativo Presente"
+    assert row[2] == "Indicativo_Presente"
 
 
 def test_generate_verb_csv_skip_tu_vos_structural(app) -> None:
@@ -185,4 +185,4 @@ def test_generate_batch_csv_logic(app):
     assert len(rows) == 2
     assert '"falar"' in rows[0]
     assert '"comer"' in rows[1]
-    assert "Indicativo Presente" in rows[0]
+    assert "Indicativo_Presente" in rows[0]

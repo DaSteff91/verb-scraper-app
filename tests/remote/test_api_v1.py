@@ -102,7 +102,7 @@ def test_api_dialect_and_anki_snapshot(
 
     # GOLD STANDARD: This is exactly what the exporter should output for comer/indicativo/presente/br
     expected_row = (
-        '"comer","eu como\nele come\nnós comemos\neles comem","Indicativo Presente"'
+        '"comer","eu como\nele come\nnós comemos\neles comem","Indicativo_Presente"'
     )
 
     assert anki_string == expected_row, (

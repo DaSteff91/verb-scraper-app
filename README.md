@@ -139,7 +139,7 @@ curl -H "X-API-KEY: my_secret_token" \
     }
     /* ... rest of the forms */
   ],
-  "anki_string": "\"comer\",\"eu como\\ntu comes...\",\"Indicativo Presente\""
+  "anki_string": "\"comer\",\"eu como\\ntu comes...\",\"Indicativo_Presente\""
 }
 ```
 

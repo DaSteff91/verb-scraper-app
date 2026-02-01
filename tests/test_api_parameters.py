@@ -74,9 +74,9 @@ def test_api_get_verb_anki_format(client: FlaskClient, app: Flask) -> None:
     assert "anki_string" in data
 
     # Check that the anki_string follows the expected CSV structure
-    # Expected: "comer","eu como\nele come\nnós comemos\neles comem","Indicativo Presente"
+    # Expected: "comer","eu como\nele come\nnós comemos\neles comem","Indicativo_Presente"
     anki_str: str = data["anki_string"]
     assert anki_str.startswith('"comer"')
-    assert "Indicativo Presente" in anki_str
+    assert "Indicativo_Presente" in anki_str
     # Verify newlines exist within the middle column
     assert "\n" in anki_str
