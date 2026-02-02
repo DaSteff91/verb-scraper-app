@@ -185,4 +185,4 @@ def test_generate_batch_csv_logic(app):
     assert len(rows) == 2
     assert '"falar"' in rows[0]
     assert '"comer"' in rows[1]
-    assert "Indicativo_Presente" in rows[0]
+    assert "Indicativo Presente" in rows[0]
