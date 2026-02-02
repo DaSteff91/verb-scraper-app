@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.23.2 (2026-02-02)
+
+### Bug Fixes
+
+- **still-a-typo-causing-a-test-to-fail**: Typo fix
+  ([`317b3e2`](https://github.com/DaSteff91/verb-scraper-app/commit/317b3e2bc9253f5dcd3c53b046922fdcef81295b))
+
+
 ## v1.23.1 (2026-02-01)
 
 ### Bug Fixes
