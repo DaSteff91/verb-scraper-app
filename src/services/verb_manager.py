@@ -47,8 +47,8 @@ class VerbManager:
         """
         Coordinates scraping from multiple sources and saves to the database.
 
-        Attempts the primary scraper first. If it returns no data, attempts
-         the backup scraper before failing.
+        Checks the DB first. If the specific verb/mode/tense
+        combination already exists, it skips the network call entirely.
 
         Args:
             verb_infinitive: The infinitive form of the verb.
@@ -56,21 +56,44 @@ class VerbManager:
             tense_name: The grammatical tense to scrape.
 
         Returns:
-            bool: True if persistence was successful, False otherwise.
+            bool: True if data is in DB (either existed or was scraped), False otherwise.
         """
         logger.debug(
-            "Starting persistence for %s (%s %s)",
+            "Starting persistence check for %s (%s %s)",
             verb_infinitive,
             mode_name,
             tense_name,
         )
 
-        # 1. Attempt Primary Source
+        # 1. DB CHECK (The Short-Circuit)
+        existing_data = (
+            db.session.query(Conjugation)
+            .join(Verb)
+            .join(Tense)
+            .join(Mode)
+            .filter(
+                Verb.infinitive == verb_infinitive,
+                Mode.name == mode_name,
+                Tense.name == tense_name,
+            )
+            .first()
+        )
+
+        if existing_data:
+            logger.info(
+                "Data already exists for %s (%s %s). Skipping scrape.",
+                verb_infinitive,
+                mode_name,
+                tense_name,
+            )
+            return True
+
+        # 2. Attempt Primary Source
         forms: Optional[List[str]] = self.primary_scraper.get_conjugations(
             verb_infinitive, mode_name, tense_name
         )
 
-        # 2. Failover to Backup Source if primary yields no results
+        # 3. Failover to Backup Source
         if not forms:
             logger.warning(
                 "Primary source failed for %s. Attempting backup source...",
@@ -89,39 +112,38 @@ class VerbManager:
             )
             return False
 
+        # 4. Persistence Logic
         try:
-            # 3. Get or Create Verb
-            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()  # type: ignore
+            # Get or Create Verb
+            verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
             if not verb:
                 try:
                     verb = Verb(infinitive=verb_infinitive)
                     db.session.add(verb)
-                    db.session.flush()  # Try to push to DB immediately
+                    db.session.flush()
                     logger.debug("Created new verb entry: %s", verb_infinitive)
                 except Exception:
-                    # If another thread beat us to it, rollback the flush and fetch it
                     db.session.rollback()
                     verb = Verb.query.filter_by(infinitive=verb_infinitive).first()
                     logger.debug(
                         "Verb %s was created by another thread.", verb_infinitive
                     )
 
-            # 4. Get or Create Mode
-            mode = Mode.query.filter_by(name=mode_name).first()  # type: ignore
+            # Get or Create Mode
+            mode = Mode.query.filter_by(name=mode_name).first()
             if not mode:
                 mode = Mode(name=mode_name)
                 db.session.add(mode)
                 db.session.flush()
 
-            # 5. Get or Create Tense (linked to Mode)
-            tense = Tense.query.filter_by(name=tense_name, mode=mode).first()  # type: ignore
+            # Get or Create Tense
+            tense = Tense.query.filter_by(name=tense_name, mode=mode).first()
             if not tense:
                 tense = Tense(name=tense_name, mode=mode)
                 db.session.add(tense)
-
             db.session.flush()
 
-            # 6. Handle person mapping and offsets
+            # Handle person mapping and offsets
             offset: int = 0
             if len(forms) == 5 and mode_name == "Imperativo":
                 offset = 1
@@ -132,13 +154,14 @@ class VerbManager:
                     break
 
                 p_name: str = self.person_names[p_index]
-                person = Person.query.filter_by(name=p_name).first()  # type: ignore
+                person = Person.query.filter_by(name=p_name).first()
                 if not person:
                     person = Person(name=p_name, sort_order=p_index)
                     db.session.add(person)
                     db.session.flush()
 
-                exists = Conjugation.query.filter_by(  # type: ignore
+                # Re-check specifically for this person (extra safety for threading)
+                exists = Conjugation.query.filter_by(
                     verb=verb, tense=tense, person=person
                 ).first()
 
