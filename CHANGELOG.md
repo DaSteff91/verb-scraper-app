@@ -2,6 +2,16 @@
 
 <!-- version list -->
 
+## v1.23.3 (2026-02-03)
+
+### Bug Fixes
+
+-
+  **instead-of-directly-going-to-scrape-the-verbs-now-its-first-checked-in-the-db-for-existence-and-only-missing-versions-get-scraped**:
+  Fixing the verb management and scraping
+  ([`5f8dc42`](https://github.com/DaSteff91/verb-scraper-app/commit/5f8dc42618cb6fbf52f4720df37182952e08c137))
+
+
 ## v1.23.2 (2026-02-02)
 
 ### Bug Fixes
