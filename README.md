@@ -8,7 +8,64 @@
 
 ## Summary
 
-The Portuguese Conjugation Scraper App is a web application and RESTful API for extracting and normalizing Portuguese verb conjugations. The system automates the transition from unstructured HTML data to a relational SQLite database (5NF) and generates structured CSV exports for tools like Anki.
+The **Portuguese Conjugation Scraper** is an application that is meant to support You learn faster Portuguese verb conjugations. 
+
+It is optimized to work in combination with [Anki](https://ankiweb.net). You simply scrape the conjugations and export them as .csv formatted table. Like this they can be easily imported into Your Anki deck. It is all set to be plug-and-play for one direction learning + tags that represent the time and mode of the conjugation.
+
+Additionally, it offers also a RESTful API that could be used exactly the same way without opening it at all in a browser.
+
+## Using it
+
+The app is meant to be used in two main fashions:
+1. You clone the repo and containerize the app using Docker. If you want to build and deploy the container you can use the provided release.yml as reference in conjunction with a GitHub account and respective secrets.
+2. Locally without any repo involved just using Python and a SQLite DB.
+
+To scrape verbs and fill the DB you must be online. Even if you do not export the data as .csv the scraped verbs will be stored in the DB anyway and can be accessed offline later via the same approach.
+
+A more comprehensive guide will follow.
+
+## Features
+
+- **Grammatical Coverage:**
+  - Support for all 6 persons (Eu, Tu, Ele, Nós, Vós, Eles).
+  - Handles irregular verb structures (e.g., _pôr_, _ir_) via scoped DOM traversal.
+  - Includes a whitelist-based validator for grammatical Modes and Tenses.
+- **Data Integrity & Persistence:**
+  - **5NF Database Schema:** Zero redundancy by separating grammatical metadata from verb instances.
+  - **Atomic Transactions:** Ensures database consistency during multi-threaded batch writes.
+  - **Automated Janitor:** Self-cleaning logic for background job records to prevent database bloat.
+- **API & Backend Logic:**
+  - **Threaded Batch Engine:** Concurrent scraping using `ThreadPoolExecutor` with a configurable worker pool.
+  - **Asynchronous Jobs:** UUID-based job tracking for non-blocking API interactions.
+  - **Diagnostic Health Checks:** Endpoint for verifying DB connectivity, filesystem write permissions, and system seeding status.
+  - **Dialect Normalization:** Automatic filtering of second-person forms (_tu_/_vós_) for Brazilian Portuguese study requirements.
+- **User Interface:**
+  - **Scrape Basket:** Alpine.js-powered frontend for building batch requests locally before submission.
+  - **Dynamic Results Dashboard:** Accordion-style views for reviewing batch results.
+- **Export Capabilities:**
+  - **Anki Integration:** CSV generation using byte-streams with UTF-8-SIG encoding for direct import into flashcard software.
+  - **Native Formatting:** Supports newline-separated values within CSV fields for card styling.
+
+
+## Directory Structure
+
+```text
+verb-scraper-app/
+├── .github/                # CI/CD workflows for testing and deployment
+├── instance/               # Persistent SQLite storage and health check markers
+├── src/                    # Application source code
+│   ├── models/             # SQLAlchemy 5NF schema (Verbs, Modes, Tenses, Persons, Conjugations)
+│   ├── routes/             # Flask Blueprints (Web UI and REST API v1)
+│   ├── services/           # Logic for auth, scraping, batching, and CSV generation
+│   ├── templates/          # Jinja2 templates using Alpine.js for frontend logic
+│   ├── config.py           # Fail-fast configuration loading
+│   └── __init__.py         # App factory and logger initialization
+├── tests/                  # Pytest suite (Unit, Integration, and Remote Contract tests)
+├── Dockerfile              # Multi-stage production image
+├── docker-compose.yml      # Local and production service orchestration
+└── run.py                  # Entry point for WSGI servers
+```
+
 
 ## System Architecture
 
@@ -42,47 +99,6 @@ sequenceDiagram
     U->>A: GET /api/v1/batch/<job_id>
     A-->>U: 200 OK (Results Summary)
 ```
-
-### Directory Structure
-
-```text
-verb-scraper-app/
-├── .github/                # CI/CD workflows for testing and deployment
-├── instance/               # Persistent SQLite storage and health check markers
-├── src/                    # Application source code
-│   ├── models/             # SQLAlchemy 5NF schema (Verbs, Modes, Tenses, Persons, Conjugations)
-│   ├── routes/             # Flask Blueprints (Web UI and REST API v1)
-│   ├── services/           # Logic for auth, scraping, batching, and CSV generation
-│   ├── templates/          # Jinja2 templates using Alpine.js for frontend logic
-│   ├── config.py           # Fail-fast configuration loading
-│   └── __init__.py         # App factory and logger initialization
-├── tests/                  # Pytest suite (Unit, Integration, and Remote Contract tests)
-├── Dockerfile              # Multi-stage production image
-├── docker-compose.yml      # Local and production service orchestration
-└── run.py                  # Entry point for WSGI servers
-```
-
-## Detailed Features
-
-- **Grammatical Coverage:**
-  - Full support for all 6-person paradigms (Eu, Tu, Ele, Nós, Vós, Eles).
-  - Handles irregular verb structures (e.g., _pôr_, _ir_) via scoped DOM traversal.
-  - Includes a whitelist-based validator for grammatical Modes and Tenses.
-- **Data Integrity & Persistence:**
-  - **5th Normal Form (5NF) Database:** Minimizes redundancy by separating grammatical metadata from verb instances.
-  - **Atomic Transactions:** Ensures database consistency during multi-threaded batch writes.
-  - **Automated Janitor:** Self-cleaning logic for background job records to prevent database bloat.
-- **API & Backend Logic:**
-  - **Threaded Batch Engine:** Concurrent scraping using `ThreadPoolExecutor` with a configurable worker pool.
-  - **Asynchronous Jobs:** UUID-based job tracking for non-blocking API interactions.
-  - **Diagnostic Health Checks:** Endpoint for verifying DB connectivity, filesystem write permissions, and system seeding status.
-  - **Dialect Normalization:** Automatic filtering of second-person forms (_tu_/_vós_) for Brazilian Portuguese study requirements.
-- **User Interface:**
-  - **Scrape Basket:** Alpine.js-powered frontend for building batch requests locally before submission.
-  - **Dynamic Results Dashboard:** Accordion-style views for reviewing batch results.
-- **Export Capabilities:**
-  - **Anki Integration:** CSV generation using byte-streams with UTF-8-SIG encoding for direct import into flashcard software.
-  - **Native Formatting:** Supports newline-separated values within CSV fields for card styling.
 
 ## API Documentation (v1)
 
