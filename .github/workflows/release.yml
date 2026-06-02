@@ -3,6 +3,7 @@ name: CI/CD - Version, Build, and Deploy
 on:
   push:
     branches:
+      - dev
       - main
 
 jobs:
@@ -60,6 +61,7 @@ jobs:
 
   versioning:
     name: Running Python Semantic Release
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -100,6 +102,7 @@ jobs:
 
   build-and-push:
     name: Building app into container and push to GHCR
+    if: github.ref == 'refs/heads/main'
     needs: versioning
     runs-on: ubuntu-latest
     permissions:
@@ -142,6 +145,7 @@ jobs:
 
   deploy:
     name: Deploy to Server
+    if: github.ref == 'refs/heads/main'
     needs: [versioning, build-and-push]
     runs-on: ubuntu-latest
     steps:
@@ -193,6 +197,7 @@ jobs:
 
   smoke-test:
     name: Post-Deployment Smoke Test
+    if: github.ref == 'refs/heads/main'
     needs: deploy
     runs-on: ubuntu-latest
     steps:
