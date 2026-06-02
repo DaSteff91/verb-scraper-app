@@ -1,0 +1,11 @@
+# Global owner fallback
+* @DaSteff91
+
+# Core application areas
+/src/routes/ @DaSteff91
+/src/services/ @DaSteff91
+/src/models/ @DaSteff91
+
+# Testing and CI
+/tests/ @DaSteff91
+/.github/workflows/ @DaSteff91
