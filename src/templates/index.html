@@ -1,20 +1,8 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center" x-data="scrapeComponent()">
   <div class="col-12 col-lg-10 col-xl-8">
-    <!-- Main Form Card -->
-    <section class="modern-card p-4 p-md-5 mb-5">
-      <form method="POST" id="scrapeForm">
-        <!-- Dynamically generate hidden inputs for all selections -->
-        <template x-for="m in selectedModes" :key="'hidden-mode-' + m">
-          <input type="hidden" name="mode" :value="m" />
-        </template>
-
-        <template x-for="t in selectedTenses" :key="'hidden-tense-' + t">
-          <input type="hidden" name="tense" :value="t" />
-        </template>
-        <input type="hidden" name="filename" :value="filename" />
-        <input type="hidden" name="action" :value="formAction" />
-
+    <section class="modern-card p-4 p-md-5 mb-4">
+      <form id="scrapeForm" @submit.prevent="scrapeNow">
         <div class="mb-5">
           <label for="verb" class="form-label small text-uppercase mb-3"
             >Portuguese Infinitive</label
@@ -106,92 +94,102 @@
               </div>
             </div>
             <div class="col-md-5">
-              <div class="d-grid gap-2">
-                <button
-                  type="submit"
-                  class="btn btn-primary w-100 py-3"
-                  @click="setAction('single')"
-                >
-                  Scrape Now
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary w-100 py-2"
-                  @click="setAction('cart'); addToBasket()"
-                >
-                  Add to Cart
-                </button>
-              </div>
+              <button
+                type="submit"
+                class="btn btn-primary w-100 py-3"
+                :disabled="isProcessing"
+              >
+                <span x-show="!isProcessing">Scrape Now</span>
+                <span
+                  x-show="isProcessing"
+                  class="spinner-border spinner-border-sm"
+                  aria-hidden="true"
+                ></span>
+              </button>
             </div>
           </div>
         </div>
       </form>
     </section>
 
-    <!-- Batch List -->
-    <section x-show="basket.length > 0" x-transition>
-      <h2 class="h6 fw-bold text-uppercase text-white mb-4">Batch Queue</h2>
-      <div class="list-group mb-4">
-        <template x-for="(task, index) in basket" :key="index">
-          <div
-            class="list-group-item modern-card border-secondary bg-transparent mb-2 p-3 d-flex justify-content-between align-items-center"
-          >
-            <div class="text-white">
-              <span
-                class="fw-bold text-uppercase small"
-                x-text="task.verb"
-              ></span>
-              <span
-                class="text-muted small ms-2"
-                x-text="task.mode + ' / ' + task.tense"
-              ></span>
-            </div>
-            <div class="btn-group">
-              <button
-                @click="editTask(index)"
-                class="btn btn-sm btn-outline-secondary border-0 me-2"
-                aria-label="Edit"
-              >
-                Edit
-              </button>
-              <button
-                @click="basket.splice(index, 1)"
-                class="btn btn-sm text-danger text-uppercase fw-bold border-0"
-                aria-label="Remove"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </template>
+    <section x-show="statusMessage" x-transition class="mb-4">
+      <div class="alert mb-0" :class="statusType === 'error' ? 'alert-danger' : 'alert-success'">
+        <span x-text="statusMessage"></span>
+      </div>
+    </section>
+
+    <section class="modern-card p-4" x-show="sessionSummary.length > 0" x-transition>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 fw-bold text-uppercase text-white mb-0">Scrape Summary</h2>
+        <button
+          type="button"
+          class="btn btn-link btn-sm text-decoration-none text-white fw-bold p-0"
+          @click="showSummary = !showSummary"
+          x-text="showSummary ? 'Hide Details' : 'View Details'"
+        ></button>
       </div>
 
-      <div class="modern-card p-4 border-primary">
-        <div class="mb-4">
-          <label
-            for="batch-filename"
-            class="form-label small text-uppercase mb-2"
-            >Combined Group Filename</label
+      <p class="text-muted small mb-3">
+        <span x-text="sessionSummary.length"></span> scraped selection(s) in this session.
+      </p>
+
+      <div x-show="showSummary" x-transition>
+        <div class="mb-3">
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            @click="downloadCombined()"
           >
-          <input
-            type="text"
-            id="batch-filename"
-            class="form-control"
-            x-model="filename"
-          />
+            Download Combined CSV
+          </button>
         </div>
-        <button
-          @click="executeBatch()"
-          :disabled="isProcessing"
-          class="btn btn-primary btn-lg w-100 py-3"
-        >
-          <span x-show="!isProcessing">Process Batch Items</span>
-          <span
-            x-show="isProcessing"
-            class="spinner-border spinner-border-sm"
-            aria-hidden="true"
-          ></span>
-        </button>
+
+        <div class="accordion" id="sessionSummaryAccordion">
+          <template x-for="(item, index) in sessionSummary" :key="item.key">
+            <article class="accordion-item modern-card mb-3 border-0 overflow-hidden">
+              <h3 class="accordion-header">
+                <button
+                  class="accordion-button collapsed bg-transparent text-white py-3"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  :data-bs-target="'#summary-collapse-' + index"
+                >
+                  <div class="d-flex flex-column align-items-start">
+                    <strong class="text-uppercase ls-wide" x-text="item.verb"></strong>
+                    <span class="text-muted small" x-text="item.mode + ' | ' + item.tense"></span>
+                  </div>
+                </button>
+              </h3>
+              <div
+                class="accordion-collapse collapse"
+                :id="'summary-collapse-' + index"
+                data-bs-parent="#sessionSummaryAccordion"
+              >
+                <div class="accordion-body border-top border-secondary border-opacity-25 p-0">
+                  <table class="table table-dark table-sm mb-0" style="--bs-table-bg: transparent">
+                    <tbody>
+                      <template x-for="conj in item.conjugations" :key="item.key + '-' + conj.person">
+                        <tr>
+                          <td class="ps-4 py-2 text-muted small" style="width: 35%" x-text="conj.person"></td>
+                          <td class="pe-4 py-2 fw-bold text-white" x-text="conj.value"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                  <div class="p-3 border-top border-secondary border-opacity-25">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      @click="downloadSingle(item)"
+                    >
+                      Download CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
       </div>
     </section>
   </div>
@@ -201,10 +199,13 @@
   function scrapeComponent() {
     return {
       isProcessing: false,
-      basket: [],
       verb: "",
       filename: "verbs_export",
-      formAction: "single",
+      statusMessage: "",
+      statusType: "success",
+      showSummary: false,
+      sessionSummary: [],
+      sessionTasks: [],
       selectedModes: ["Indicativo"],
       selectedTenses: ["Presente"],
       mapping: {
@@ -251,56 +252,80 @@
           ? (this.selectedTenses = [])
           : (this.selectedTenses = [...this.availableTenses]);
       },
-      setAction(action) {
-        this.formAction = action;
-      },
-      addToBasket() {
-        const verbClean = this.verb.trim().toLowerCase();
-        if (!verbClean) return;
-        this.selectedModes.forEach((m) => {
-          this.selectedTenses.forEach((t) => {
-            if (this.mapping[m].includes(t)) {
-              if (
-                !this.basket.some(
-                  (i) => i.verb === verbClean && i.mode === m && i.tense === t,
-                )
-              ) {
-                this.basket.push({ verb: verbClean, mode: m, tense: t });
-              }
-            }
-          });
+      upsertSummary(items) {
+        items.forEach((item) => {
+          const key = `${item.verb}|${item.mode}|${item.tense}`;
+          const normalized = { ...item, key };
+          const existingIndex = this.sessionSummary.findIndex((i) => i.key === key);
+          if (existingIndex >= 0) {
+            this.sessionSummary.splice(existingIndex, 1, normalized);
+          } else {
+            this.sessionSummary.unshift(normalized);
+          }
         });
-        this.verb = "";
       },
-      editTask(index) {
-        const task = this.basket[index];
-        this.verb = task.verb;
-        this.selectedModes = [task.mode];
-        this.selectedTenses = [task.tense];
-        this.basket.splice(index, 1);
+      setTasks(tasks) {
+        tasks.forEach((task) => {
+          const exists = this.sessionTasks.some(
+            (t) => t.verb === task.verb && t.mode === task.mode && t.tense === task.tense,
+          );
+          if (!exists) this.sessionTasks.push(task);
+        });
       },
-      async executeBatch() {
-        if (this.basket.length === 0 || this.isProcessing) return;
+      async scrapeNow() {
+        const verbClean = this.verb.trim().toLowerCase();
+        if (!verbClean || this.isProcessing) return;
+
         this.isProcessing = true;
+        this.statusMessage = "";
+
         try {
-          const response = await fetch("/batch-scrape", {
+          const response = await fetch("/scrape-summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              filename: this.filename || "batch_export",
-              tasks: this.basket,
+              verb: verbClean,
+              modes: this.selectedModes,
+              tenses: this.selectedTenses,
+              filename: this.filename || "verbs_export",
             }),
           });
-          const result = await response.json();
-          if (response.ok) window.location.href = result.redirect_url;
-          else {
-            alert("Error: " + result.error);
-            this.isProcessing = false;
+
+          const payload = await response.json();
+          if (!response.ok) {
+            this.statusType = "error";
+            this.statusMessage = payload.error || "Scrape failed.";
+            return;
           }
+
+          this.statusType = "success";
+          this.statusMessage = payload.message || "Scrape complete.";
+          this.filename = payload.filename || this.filename;
+          this.setTasks(payload.tasks || []);
+          this.upsertSummary(payload.summary || []);
+          this.verb = "";
         } catch (error) {
-          alert("Connection Error");
+          this.statusType = "error";
+          this.statusMessage = "Connection error. Please try again.";
+        } finally {
           this.isProcessing = false;
         }
+      },
+      downloadSingle(item) {
+        const basePath = `/export/${encodeURIComponent(item.verb)}`;
+        const url = new URL(basePath, window.location.origin);
+        url.searchParams.append("mode", item.mode);
+        url.searchParams.append("tense", item.tense);
+        if (this.filename) url.searchParams.append("filename", this.filename);
+        window.location.href = url.href;
+      },
+      downloadCombined() {
+        if (!this.sessionTasks.length) return;
+        const basePath = "/export-batch";
+        const url = new URL(basePath, window.location.origin);
+        url.searchParams.append("tasks", JSON.stringify(this.sessionTasks));
+        url.searchParams.append("filename", this.filename || "session_export");
+        window.location.href = url.href;
       },
     };
   }

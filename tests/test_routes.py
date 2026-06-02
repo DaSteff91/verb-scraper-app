@@ -9,7 +9,6 @@ import time
 from flask.testing import FlaskClient
 from typing import Dict, Any
 import requests_mock
-from werkzeug.datastructures import MultiDict
 from src.services.verb_manager import VerbManager
 
 
@@ -19,78 +18,67 @@ def test_index_route_get(client: FlaskClient) -> None:
     assert response.status_code == 200
     assert b"Portuguese Infinitive" in response.data
     assert b"Scrape Now" in response.data
-    assert b"Add to Cart" in response.data
+    assert b"Add to Cart" not in response.data
+    assert b"Scrape Summary" in response.data
 
 
 def test_scrape_form_submission_success(
     client: FlaskClient, requests_mock: requests_mock.Mocker, sample_html
 ) -> None:
-    """Verify that submitting the form redirects to the results page."""
+    """Verify the async scrape endpoint returns summary payload for in-page UX."""
     # Mock the website response
     mock_content = sample_html("falar.html")
     requests_mock.get("https://www.conjugacao.com.br/verbo-falar/", text=mock_content)
 
-    # Simulate form POST
     response = client.post(
-        "/",
-        data={
+        "/scrape-summary",
+        json={
             "verb": "falar",
-            "mode": "Indicativo",
-            "tense": "Presente",
-            "action": "single",
+            "modes": ["Indicativo"],
+            "tenses": ["Presente"],
+            "filename": "verbs_export",
         },
-        follow_redirects=True,
     )
 
-    # Check that we landed on the results page
     assert response.status_code == 200
-    assert b"Batch Scrape Summary" in response.data
-    assert b"falar" in response.data
-    assert b"eu falo" in response.data
+    data = response.get_json()
+    assert data["status"] == "success"
+    assert data["summary"][0]["verb"] == "falar"
+    assert data["summary"][0]["mode"] == "Indicativo"
+    assert data["summary"][0]["tense"] == "Presente"
+    assert len(data["summary"][0]["conjugations"]) == 6
 
 
 def test_scrape_form_submission_dedupes_duplicate_tenses(
     client: FlaskClient, requests_mock: requests_mock.Mocker, sample_html
 ) -> None:
-    """Verify duplicate tense fields do not produce duplicate result blocks."""
+    """Verify duplicate tense entries in payload are deduped server-side."""
     mock_content = sample_html("falar.html")
     requests_mock.get("https://www.conjugacao.com.br/verbo-falar/", text=mock_content)
 
     response = client.post(
-        "/",
-        data=MultiDict(
-            [
-                ("verb", "falar"),
-                ("mode", "Indicativo"),
-                ("tense", "Presente"),
-                ("tense", "Presente"),
-                ("action", "single"),
-            ]
-        ),
-        follow_redirects=True,
-    )
-
-    assert response.status_code == 200
-    assert b"Batch Scrape Summary" in response.data
-    assert b"eu falo" in response.data
-    assert response.data.count(b"Indicativo | Presente") == 1
-
-
-def test_scrape_form_action_cart_does_not_trigger_scrape(client: FlaskClient) -> None:
-    """Verify server-side action guard keeps cart intent from scraping route."""
-    response = client.post(
-        "/",
-        data={
+        "/scrape-summary",
+        json={
             "verb": "falar",
-            "mode": "Indicativo",
-            "tense": "Presente",
-            "action": "cart",
+            "modes": ["Indicativo"],
+            "tenses": ["Presente", "Presente"],
         },
-        follow_redirects=True,
     )
 
     assert response.status_code == 200
-    assert b"Use &#39;Add to Cart&#39; for queueing items before batch scraping." in response.data
+    data = response.get_json()
+    assert len(data["tasks"]) == 1
+    assert len(data["summary"]) == 1
+
+
+def test_scrape_summary_rejects_invalid_payload(client: FlaskClient) -> None:
+    """Verify scrape summary endpoint validates JSON shape."""
+    response = client.post(
+        "/scrape-summary",
+        json={"verb": "falar", "modes": "Indicativo", "tenses": ["Presente"]},
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Modes and tenses must be lists."
 
 
 def test_export_csv_route_success(
@@ -102,7 +90,10 @@ def test_export_csv_route_success(
     # 1. Scrape 'ir' first so it exists in the in-memory DB
     mock_content = sample_html("ir.html")
     requests_mock.get("https://www.conjugacao.com.br/verbo-ir/", text=mock_content)
-    client.post("/", data={"verb": "ir", "mode": "Indicativo", "tense": "Presente"})
+    client.post(
+        "/scrape-summary",
+        json={"verb": "ir", "modes": ["Indicativo"], "tenses": ["Presente"]},
+    )
 
     # 2. Call the export route
     response = client.get("/export/ir?mode=Indicativo&tense=Presente")
@@ -145,16 +136,14 @@ def test_scrape_form_failure_handling(
     backup_url = f"{manager.backup_scraper.base_url}badverb"
     requests_mock.get(backup_url, status_code=404)
 
-    # Submit the form
+    # Submit scrape summary request
     response = client.post(
-        "/",
-        data={"verb": "badverb", "mode": "Indicativo", "tense": "Presente"},
-        follow_redirects=True,
+        "/scrape-summary",
+        json={"verb": "badverb", "modes": ["Indicativo"], "tenses": ["Presente"]},
     )
 
-    assert response.status_code == 200
-    assert b"Could not find the verb" in response.data
-    assert b"badverb" in response.data
+    assert response.status_code == 404
+    assert "Could not find the verb" in response.get_json()["error"]
 
 
 def test_results_page_404(client: FlaskClient) -> None:

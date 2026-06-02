@@ -139,6 +139,111 @@ def index() -> Union[str, WerkzeugResponse]:
     return render_template("index.html")
 
 
+@main_bp.route("/scrape-summary", methods=["POST"])
+def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
+    """
+    Execute scrape tasks and return an in-page summary payload.
+
+    This endpoint supports the landing-page async UX by returning compact
+    status feedback plus a collapsible-ready summary data structure.
+    """
+    json_data: Any = request.get_json()
+    if not isinstance(json_data, dict):
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    verb_raw: str = str(json_data.get("verb", "")).strip()
+    modes_raw: Any = json_data.get("modes", [])
+    tenses_raw: Any = json_data.get("tenses", [])
+    custom_filename: str = str(json_data.get("filename", "")).strip()
+
+    if not InputValidator.is_valid_verb(verb_raw):
+        return jsonify({"error": "Invalid verb format. Use letters and hyphens."}), 400
+
+    if not isinstance(modes_raw, list) or not isinstance(tenses_raw, list):
+        return jsonify({"error": "Modes and tenses must be lists."}), 400
+
+    modes: List[str] = list(dict.fromkeys(str(m) for m in modes_raw))
+    tenses: List[str] = list(dict.fromkeys(str(t) for t in tenses_raw))
+
+    if not modes or not tenses:
+        return jsonify({"error": "Please select at least one mode and one tense."}), 400
+
+    verb_infinitive: str = verb_raw.lower()
+    tasks: List[Dict[str, str]] = []
+    seen_tasks: set[tuple[str, str, str]] = set()
+
+    for mode in modes:
+        for tense in tenses:
+            if InputValidator.is_valid_grammar(mode, tense):
+                task_key = (verb_infinitive, mode, tense)
+                if task_key in seen_tasks:
+                    continue
+                seen_tasks.add(task_key)
+                tasks.append(
+                    {"verb": task_key[0], "mode": task_key[1], "tense": task_key[2]}
+                )
+
+    if not tasks:
+        return jsonify({"error": "No valid grammatical combinations were selected."}), 400
+
+    from src.services.verb_manager import VerbManager
+
+    manager: VerbManager = VerbManager()
+    summary: Dict[str, int] = manager.process_batch(tasks)
+    success_count = summary.get("success", 0)
+    failed_count = summary.get("failed", 0)
+
+    if success_count == 0:
+        return (
+            jsonify(
+                {
+                    "error": f"Could not find the verb '{verb_infinitive}' for the selected tenses."
+                }
+            ),
+            404,
+        )
+
+    batch_display: List[Dict[str, Any]] = []
+    for task in tasks:
+        verb = Verb.query.filter_by(infinitive=task["verb"]).first()
+        if not verb:
+            continue
+
+        conjs = (
+            Conjugation.query.join(Tense)
+            .join(Mode)
+            .filter(
+                Conjugation.verb_id == verb.id,
+                Tense.name == task["tense"],
+                Mode.name == task["mode"],
+            )
+            .all()
+        )
+
+        batch_display.append(
+            {
+                "verb": verb.infinitive,
+                "mode": task["mode"],
+                "tense": task["tense"],
+                "conjugations": [
+                    {"person": conj.person.name, "value": conj.value} for conj in conjs
+                ],
+            }
+        )
+
+    filename = custom_filename if custom_filename else f"{verb_infinitive}_export"
+    response_payload: Dict[str, Any] = {
+        "status": "success",
+        "message": f"Scrape complete: {success_count} selection(s) ready.",
+        "failed_count": failed_count,
+        "filename": filename,
+        "tasks": tasks,
+        "summary": batch_display,
+    }
+
+    return jsonify(response_payload)
+
+
 @main_bp.route("/favicon.ico")
 def favicon() -> WerkzeugResponse:
     """
