@@ -5,6 +5,7 @@ services:
     restart: always
     environment:
       - SECRET_KEY=${SECRET_KEY:-default-insecure-key}
+      - API_KEY=${API_KEY:-default-insecure-api-key}
       - LOG_LEVEL=INFO
     ports:
       - "5050:5050"
