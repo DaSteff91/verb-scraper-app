@@ -68,6 +68,21 @@ def test_export_batch_csv_aggregation(client: FlaskClient, app: Flask) -> None:
     assert b"falar" in response.data
 
 
+def test_results_batch_skips_empty_conjugation_cards(
+    client: FlaskClient, app: Flask
+) -> None:
+    """Verify impossible combinations are omitted from batch display cards."""
+    with app.app_context():
+        manager = VerbManager()
+        manager.get_or_create_verb_data("falar", "Indicativo", "Presente")
+
+    tasks = [{"verb": "falar", "mode": "Indicativo", "tense": "Futuro do Pretérito"}]
+    response = client.get(f"/results-batch?tasks={json.dumps(tasks)}&filename=test_batch")
+
+    assert response.status_code == 200
+    assert b"No verbs found in the database for this batch." in response.data
+
+
 def test_verb_manager_imperativo_offset_logic(
     app: Flask, requests_mock: Any, sample_html: Any
 ) -> None:

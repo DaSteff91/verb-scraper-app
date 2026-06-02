@@ -139,10 +139,8 @@
       </p>
 
       <div x-show="showSummary" x-transition>
-        <div
-          class="d-flex flex-column flex-sm-row flex-wrap gap-3 align-items-stretch align-items-sm-end mb-3"
-        >
-          <div class="flex-grow-1">
+        <div class="summary-controls mb-3">
+          <div class="summary-filename-block">
             <label
               for="summary-filename"
               class="form-label small text-uppercase mb-2"
@@ -159,13 +157,27 @@
               <span class="input-group-text">.csv</span>
             </div>
           </div>
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            @click="downloadCombined()"
-          >
-            Download
-          </button>
+          <div class="summary-actions-block">
+            <div class="form-check form-switch m-0 p-0 summary-toggle">
+              <label class="form-check-label small fw-bold text-white" for="skipCheck">
+                Exclude tu / vós
+              </label>
+              <input
+                class="form-check-input ms-0"
+                type="checkbox"
+                role="switch"
+                id="skipCheck"
+                x-model="skipTuVos"
+              />
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline-secondary summary-download-btn"
+              @click="downloadCombined()"
+            >
+              Download
+            </button>
+          </div>
         </div>
 
         <div class="accordion" id="sessionSummaryAccordion">
@@ -200,15 +212,6 @@
                       </template>
                     </tbody>
                   </table>
-                  <div class="p-3 border-top border-secondary border-opacity-25">
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm"
-                      @click="downloadSingle(item)"
-                    >
-                      Download CSV
-                    </button>
-                  </div>
                 </div>
               </div>
             </article>
@@ -228,6 +231,7 @@
       toast: { visible: false, type: "success", message: "" },
       toastTimer: null,
       showSummary: false,
+      skipTuVos: true,
       sessionSummary: [],
       sessionTasks: [],
       selectedModes: ["Indicativo"],
@@ -294,6 +298,7 @@
       },
       upsertSummary(items) {
         items.forEach((item) => {
+          if (!Array.isArray(item.conjugations) || item.conjugations.length === 0) return;
           const key = `${item.verb}|${item.mode}|${item.tense}`;
           const normalized = { ...item, key };
           const existingIndex = this.sessionSummary.findIndex((i) => i.key === key);
@@ -348,20 +353,13 @@
           this.isProcessing = false;
         }
       },
-      downloadSingle(item) {
-        const basePath = `/export/${encodeURIComponent(item.verb)}`;
-        const url = new URL(basePath, window.location.origin);
-        url.searchParams.append("mode", item.mode);
-        url.searchParams.append("tense", item.tense);
-        if (this.filename) url.searchParams.append("filename", this.filename);
-        window.location.href = url.href;
-      },
       downloadCombined() {
         if (!this.sessionTasks.length) return;
         const basePath = "/export-batch";
         const url = new URL(basePath, window.location.origin);
         url.searchParams.append("tasks", JSON.stringify(this.sessionTasks));
         url.searchParams.append("filename", this.filename || "session_export");
+        if (this.skipTuVos) url.searchParams.append("skip_tu_vos", "true");
         window.location.href = url.href;
       },
     };
