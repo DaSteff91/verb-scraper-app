@@ -105,9 +105,9 @@ def test_api_dialect_and_anki_snapshot(
         '"comer","eu como\nele come\nnós comemos\neles comem","Indicativo_Presente"'
     )
 
-    assert anki_string == expected_row, (
-        "The Anki CSV output does not match the Gold Standard!"
-    )
+    assert (
+        anki_string == expected_row
+    ), "The Anki CSV output does not match the Gold Standard!"
 
 
 @pytest.mark.skipif(

@@ -30,21 +30,24 @@
     <section class="modern-card p-4 p-md-5 mb-4">
       <form id="scrapeForm" @submit.prevent="scrapeNow">
         <div class="mb-5">
-          <div class="row g-3 align-items-end">
+          <div class="row g-3 align-items-sm-center scrape-verb-row">
             <div class="col-12 col-sm-8">
               <label for="verb" class="form-label small text-uppercase mb-3"
                 >Portuguese Infinitive</label
               >
               <input
                 type="text"
-                class="form-control form-control-lg py-3 fs-3"
+                class="form-control py-3"
                 id="verb"
                 name="verb"
-                placeholder="e.g., falar"
+                placeholder="e.g., sentir, comer, ser"
                 required
                 autofocus
                 x-model="verb"
               />
+              <div class="form-text text-muted small mt-2">
+                One verb or a comma-separated list.
+              </div>
             </div>
             <div class="col-12 col-sm-4">
               <button
@@ -52,7 +55,7 @@
                 class="btn btn-primary w-100 py-3"
                 :disabled="isProcessing"
               >
-                <span x-show="!isProcessing">Scrape Now</span>
+                <span x-show="!isProcessing">Scrape</span>
                 <span
                   x-show="isProcessing"
                   class="spinner-border spinner-border-sm"

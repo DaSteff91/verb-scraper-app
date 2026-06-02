@@ -66,3 +66,27 @@ This file records why specific implementation choices were made, especially wher
 - **Preserve existing export contracts while moving UX to single page**
   - Why: reusing `/export` and `/export-batch` minimizes backend churn and regression risk.
   - Why: enables in-page downloads without introducing new CSV APIs.
+
+## 2026-06-02 - Multi-verb input on landing form
+
+### Context
+
+- The landing-page scrape input should accept a comma-separated list of verbs (e.g. `sentir, comer, ser`) in addition to single verbs.
+- The submit button label was updated as part of the unified UX, and the input/button height needed to visually match on desktop.
+
+### Decisions
+
+- **Parse comma-separated verbs in `InputValidator.parse_verbs`**
+  - Why: keeps validation logic centralized and ensures every token is still checked against the existing verb whitelist.
+  - Why: enables consistent behavior for both the HTML form POST flow and the in-page `/scrape-summary` endpoint.
+
+- **Generate tasks for every `verb × mode × tense` combination using existing backend batch orchestration**
+  - Why: minimizes regression risk by reusing `VerbManager.process_batch` and its dedupe behavior.
+
+- **Update landing-page UI copy + button label**
+  - Why: the placeholder and hint communicate multi-verb capability.
+  - Why: the primary action text becomes `Scrape`.
+
+- **Align input and submit button height**
+  - Why: `fs-3` / `form-control-lg` on the input caused the input to be taller than the button.
+  - Why: CSS on `.scrape-verb-row` enforces a matching minimum height.
