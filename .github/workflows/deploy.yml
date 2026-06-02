@@ -1,0 +1,133 @@
+name: Deploy - Build, Release, Smoke Test
+
+on:
+  workflow_run:
+    workflows:
+      - Release - Semantic Versioning
+    types:
+      - completed
+
+jobs:
+  build-and-push:
+    name: Build container and push to GHCR
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Determine latest release tag
+        id: version
+        run: |
+          git fetch --tags
+          TAG=$(git describe --tags --abbrev=0)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Using image tag: $TAG"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.tag }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to server
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and deploy to server
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_PRIVATE_SSH_KEY }}
+          script: |
+            RAW_IMAGE="ghcr.io/${{ github.repository }}"
+            IMAGE_NAME=$(echo "$RAW_IMAGE" | tr '[:upper:]' '[:lower:]')
+            IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}"
+            FULL_IMAGE_PATH="$IMAGE_NAME:$IMAGE_TAG"
+
+            CONTAINER_NAME="verb-scraper-app"
+            PORT_HOST=5050
+            APP_DIR="$HOME/verb-scraper-app"
+
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker pull "$FULL_IMAGE_PATH"
+
+            docker stop "$CONTAINER_NAME" || true
+            docker rm "$CONTAINER_NAME" || true
+
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p "$PORT_HOST:5050" \
+              -v "$APP_DIR/instance:/app/instance" \
+              --env-file "$APP_DIR/.env" \
+              "$FULL_IMAGE_PATH"
+
+            docker image prune -f
+
+  smoke-test:
+    name: Post-deployment smoke test
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pytest and requests
+        run: pip install pytest requests
+
+      - name: Run remote contract tests
+        env:
+          TEST_API_URL: "${{ secrets.TEST_API_URL }}"
+          TEST_API_KEY: "${{ secrets.API_KEY }}"
+        run: pytest tests/remote/

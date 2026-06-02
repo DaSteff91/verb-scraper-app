@@ -5,7 +5,6 @@ Provides JSON endpoints for searching and scraping verbs.
 """
 
 from datetime import UTC, datetime
-import os
 from pathlib import Path
 from sqlalchemy import text
 import logging
@@ -17,7 +16,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Response as WerkzeugResponse
 
 from src.extensions import db
-from src.models.verb import BatchJob, Conjugation, Mode, Tense, Verb
+from src.models.verb import BatchJob, Conjugation, Verb
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -69,9 +68,9 @@ def get_verb(infinitive: str) -> Union[WerkzeugResponse, tuple[WerkzeugResponse,
         result: Dict[str, Any] = {
             "infinitive": str(verb.infinitive),
             "scraped_at": verb.created_at.isoformat(),
-            "dialect": "Brazilian (no tu/vós)"
-            if skip_tu_vos
-            else "European (standard)",
+            "dialect": (
+                "Brazilian (no tu/vós)" if skip_tu_vos else "European (standard)"
+            ),
             "filters_applied": {"mode": filter_mode, "tense": filter_tense},
             "conjugations": [],
         }
@@ -233,14 +232,19 @@ def batch_scrape_api() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
         thread.start()
 
         # Return 202 Accepted immediately with the Pager (Job ID)
-        return jsonify(
-            {
-                "status": "accepted",
-                "job_id": job_id,
-                "check_status_url": url_for("api_v1.get_batch_status", job_id=job_id),
-                "message": f"Scraping {len(tasks)} verbs in the background.",
-            }
-        ), 202
+        return (
+            jsonify(
+                {
+                    "status": "accepted",
+                    "job_id": job_id,
+                    "check_status_url": url_for(
+                        "api_v1.get_batch_status", job_id=job_id
+                    ),
+                    "message": f"Scraping {len(tasks)} verbs in the background.",
+                }
+            ),
+            202,
+        )
 
     return handle_request()
 

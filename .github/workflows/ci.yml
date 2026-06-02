@@ -1,0 +1,130 @@
+name: CI - Quality and Tests
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  format:
+    name: Format Check (Black)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install black
+
+      - name: Run black --check
+        run: black --check .
+
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Run ruff check
+        run: ruff check .
+
+  typecheck:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install mypy
+
+      - name: Run mypy on src
+        run: mypy src
+
+  test:
+    name: Test Suite (offline)
+    runs-on: ubuntu-latest
+    needs:
+      - format
+      - lint
+      - typecheck
+    env:
+      SECRET_KEY: "ci-testing-key-not-for-production"
+      API_KEY: "ci-mock-key"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-flask pytest-cov requests-mock
+
+      - name: Run deterministic test suite
+        run: pytest -m "not online" --cov=src --cov-report=xml
+
+      - name: Extract coverage percentage
+        if: github.event_name == 'push'
+        id: extract_coverage
+        run: |
+          PERCENTAGE=$(python - <<'PY'
+          import xml.etree.ElementTree as ET
+          tree = ET.parse("coverage.xml")
+          rate = float(tree.getroot().attrib["line-rate"])
+          print(int(rate * 100))
+          PY
+          )
+          echo "percentage=$PERCENTAGE" >> "$GITHUB_OUTPUT"
+          if [ "$PERCENTAGE" -ge 80 ]; then
+            echo "color=brightgreen" >> "$GITHUB_OUTPUT"
+          elif [ "$PERCENTAGE" -ge 60 ]; then
+            echo "color=yellow" >> "$GITHUB_OUTPUT"
+          else
+            echo "color=red" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update coverage badge gist
+        if: github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 6b9d36ea3da77d9064471310bdf46ec7
+          filename: coverage.json
+          label: Code Coverage
+          message: ${{ steps.extract_coverage.outputs.percentage }}%
+          color: ${{ steps.extract_coverage.outputs.color }}

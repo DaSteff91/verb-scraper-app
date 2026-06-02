@@ -7,7 +7,7 @@ to prevent SSRF, Injection, and Resource Exhaustion attacks.
 
 import re
 import logging
-from typing import Set
+from typing import List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class InputValidator:
 
     # Limits to prevent Denial of Service (DoS) attacks
     MAX_VERB_LENGTH: int = 20
+    MAX_VERBS_PER_INPUT: int = 25
 
     # Whitelist for Grammatical Modes and Tenses
     ALLOWED_MODES: Set[str] = {"Indicativo", "Subjuntivo", "Imperativo"}
@@ -59,6 +60,41 @@ class InputValidator:
             return False
 
         return True
+
+    @classmethod
+    def parse_verbs(cls, raw: str) -> Optional[List[str]]:
+        """
+        Parse a comma-separated verb field into validated, deduplicated infinitives.
+
+        Args:
+            raw: User input (single verb or comma-separated list).
+
+        Returns:
+            Lower-cased verbs in first-seen order, or None if input is empty/invalid.
+        """
+        if not raw or not raw.strip():
+            return None
+
+        seen: set[str] = set()
+        verbs: List[str] = []
+        for part in raw.split(","):
+            token = part.strip().lower()
+            if not token:
+                continue
+            if token in seen:
+                continue
+            if not cls.is_valid_verb(token):
+                return None
+            seen.add(token)
+            verbs.append(token)
+
+        if not verbs:
+            return None
+
+        if len(verbs) > cls.MAX_VERBS_PER_INPUT:
+            return None
+
+        return verbs
 
     @classmethod
     def is_valid_grammar(cls, mode: str, tense: str) -> bool:

@@ -1,6 +1,6 @@
 # Portuguese Conjugation Scraper App
 
-![CI/CD Status](https://github.com/DaSteff91/verb-scraper-app/actions/workflows/release.yml/badge.svg)
+![CI Status](https://github.com/DaSteff91/verb-scraper-app/actions/workflows/ci.yml/badge.svg)
 [![Latest Release](https://img.shields.io/github/v/release/DaSteff91/verb-scraper-app)](https://github.com/DaSteff91/verb-scraper-app/releases)
 ![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/DaSteff91/6b9d36ea3da77d9064471310bdf46ec7/raw/coverage.json)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -327,6 +327,24 @@ docker compose up -d --build
 - **Versioning:** Automated semantic versioning and GitHub release generation based on commit history.
 - **Typing:** PEP 484 type annotations enforced for all core modules.
 - **Security:** Header-based API authentication and input sanitization to prevent injection and SSRF.
+
+## Branching and Contribution Workflow
+
+- `main`: stable release branch (semantic versioning and deployment entrypoint)
+- `dev`: integration branch for feature and fix work
+- short-lived branches (`feature/*`, `fix/*`) should target `dev` first
+
+See:
+- `CONTRIBUTING.md` for contributor process and required checks
+- `AGENTS.md` for repository-specific agent implementation standards
+
+## Definition of Done
+
+A change is considered complete when:
+- format, lint, type-check, and test jobs pass in CI
+- API compatibility is preserved (or breaking behavior is explicitly documented)
+- relevant documentation is updated
+- no secrets or local/generated artifacts are committed
 
 ## Live Version
 

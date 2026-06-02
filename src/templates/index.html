@@ -1,68 +1,69 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center" x-data="scrapeComponent()">
   <div class="col-12 col-lg-10 col-xl-8">
-    <!-- Multi-Mode Switch Card -->
-    <section
-      class="modern-card p-4 mb-4 d-flex align-items-center justify-content-between"
-      aria-labelledby="multi-mode-label"
+    <div
+      class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3 w-100"
+      style="z-index: 1080; max-width: min(100%, 22rem); pointer-events: none"
+      x-show="toast.visible"
+      x-transition
+      aria-live="polite"
+      aria-atomic="true"
+      role="status"
     >
-      <div>
-        <h2
-          id="multi-mode-label"
-          class="h6 mb-1 fw-bold text-white text-uppercase"
-        >
-          Multi-Scraping Mode
-        </h2>
-        <p class="text-muted small mb-0">
-          Aggregate multiple tenses into a single batch
-        </p>
-      </div>
-      <div class="form-check form-switch p-0 m-0">
-        <!-- Large, high-contrast switch -->
-        <input
-          class="form-check-input ms-0"
-          type="checkbox"
-          id="multiToggle"
-          role="switch"
-          x-model="multiScrape"
-          @change="resetSelections()"
-          aria-label="Toggle Multi-Scraping"
-        />
-      </div>
-    </section>
-
-    <!-- Main Form Card -->
-    <section class="modern-card p-4 p-md-5 mb-5">
-      <form
-        method="POST"
-        id="scrapeForm"
-        x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
+      <div
+        class="toast show border-0 shadow mx-auto"
+        style="pointer-events: auto"
+        :class="toast.type === 'error' ? 'bg-danger text-white' : 'bg-success text-white'"
       >
-        <!-- Dynamically generate hidden inputs for all selections -->
-        <template x-for="m in selectedModes" :key="'hidden-mode-' + m">
-          <input type="hidden" name="mode" :value="m" />
-        </template>
+        <div class="d-flex">
+          <div class="toast-body" x-text="toast.message"></div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            aria-label="Close"
+            @click="hideToast()"
+          ></button>
+        </div>
+      </div>
+    </div>
 
-        <template x-for="t in selectedTenses" :key="'hidden-tense-' + t">
-          <input type="hidden" name="tense" :value="t" />
-        </template>
-        <input type="hidden" name="tense" :value="selectedTenses[0]" />
-        <input type="hidden" name="filename" :value="filename" />
-
+    <section class="modern-card p-4 p-md-5 mb-4">
+      <form id="scrapeForm" @submit.prevent="scrapeNow">
         <div class="mb-5">
-          <label for="verb" class="form-label small text-uppercase mb-3"
-            >Portuguese Infinitive</label
-          >
-          <input
-            type="text"
-            class="form-control form-control-lg py-3 fs-3"
-            id="verb"
-            name="verb"
-            placeholder="e.g., falar"
-            required
-            autofocus
-            x-model="verb"
-          />
+          <div class="row g-3 align-items-sm-center scrape-verb-row">
+            <div class="col-12 col-sm-8">
+              <label for="verb" class="form-label small text-uppercase mb-3"
+                >Portuguese Infinitive</label
+              >
+              <input
+                type="text"
+                class="form-control py-3"
+                id="verb"
+                name="verb"
+                placeholder="e.g., sentir, comer, ser"
+                required
+                autofocus
+                x-model="verb"
+              />
+              <div class="form-text text-muted small mt-2">
+                One verb or a comma-separated list.
+              </div>
+            </div>
+            <div class="col-12 col-sm-4">
+              <button
+                type="submit"
+                class="btn btn-primary w-100 py-3"
+                :disabled="isProcessing"
+              >
+                <span x-show="!isProcessing">Scrape</span>
+                <span
+                  x-show="isProcessing"
+                  class="spinner-border spinner-border-sm"
+                  aria-hidden="true"
+                ></span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="row g-4">
@@ -119,102 +120,100 @@
           </div>
         </div>
 
-        <!-- Footer Action Bar -->
-        <div class="mt-5 pt-4 border-top border-secondary">
-          <div class="row align-items-center g-4">
-            <div class="col-md-7" x-show="!multiScrape" x-transition>
-              <label
-                for="single-filename"
-                class="form-label small text-uppercase mb-2"
-                >Export Filename</label
-              >
-              <div class="input-group">
-                <input
-                  type="text"
-                  id="single-filename"
-                  class="form-control"
-                  x-model="filename"
-                  placeholder="verbs_export"
-                />
-                <span class="input-group-text">.csv</span>
-              </div>
-            </div>
-            <div :class="multiScrape ? 'col-12' : 'col-md-5'">
-              <button type="submit" class="btn btn-primary w-100 py-3">
-                <span
-                  x-text="multiScrape ? 'Add to Batch' : 'Start Scrape'"
-                ></span>
-              </button>
-            </div>
-          </div>
-        </div>
       </form>
     </section>
 
-    <!-- Batch List -->
-    <section x-show="multiScrape && basket.length > 0" x-transition>
-      <h2 class="h6 fw-bold text-uppercase text-white mb-4">Batch Queue</h2>
-      <div class="list-group mb-4">
-        <template x-for="(task, index) in basket" :key="index">
-          <div
-            class="list-group-item modern-card border-secondary bg-transparent mb-2 p-3 d-flex justify-content-between align-items-center"
-          >
-            <div class="text-white">
-              <span
-                class="fw-bold text-uppercase small"
-                x-text="task.verb"
-              ></span>
-              <span
-                class="text-muted small ms-2"
-                x-text="task.mode + ' / ' + task.tense"
-              ></span>
-            </div>
-            <div class="btn-group">
-              <button
-                @click="editTask(index)"
-                class="btn btn-sm btn-outline-secondary border-0 me-2"
-                aria-label="Edit"
-              >
-                Edit
-              </button>
-              <button
-                @click="basket.splice(index, 1)"
-                class="btn btn-sm text-danger text-uppercase fw-bold border-0"
-                aria-label="Remove"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </template>
+    <section class="modern-card p-4" x-show="sessionSummary.length > 0" x-transition>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 fw-bold text-uppercase text-white mb-0">Scrape Summary</h2>
+        <button
+          type="button"
+          class="btn btn-link btn-sm text-decoration-none text-white fw-bold p-0"
+          @click="showSummary = !showSummary"
+          x-text="showSummary ? 'Hide Details' : 'View Details'"
+        ></button>
       </div>
 
-      <div class="modern-card p-4 border-primary">
-        <div class="mb-4">
-          <label
-            for="batch-filename"
-            class="form-label small text-uppercase mb-2"
-            >Combined Group Filename</label
-          >
-          <input
-            type="text"
-            id="batch-filename"
-            class="form-control"
-            x-model="filename"
-          />
-        </div>
-        <button
-          @click="executeBatch()"
-          :disabled="isProcessing"
-          class="btn btn-primary btn-lg w-100 py-3"
+      <p class="text-muted small mb-3">
+        <span x-text="sessionSummary.length"></span> scraped selection(s) in this session.
+      </p>
+
+      <div x-show="showSummary" x-transition>
+        <div
+          class="d-flex flex-column flex-sm-row flex-wrap gap-3 align-items-stretch align-items-sm-end mb-3"
         >
-          <span x-show="!isProcessing">Process Batch Items</span>
-          <span
-            x-show="isProcessing"
-            class="spinner-border spinner-border-sm"
-            aria-hidden="true"
-          ></span>
-        </button>
+          <div class="flex-grow-1">
+            <label
+              for="summary-filename"
+              class="form-label small text-uppercase mb-2"
+              >Export Filename</label
+            >
+            <div class="input-group">
+              <input
+                type="text"
+                id="summary-filename"
+                class="form-control"
+                x-model="filename"
+                placeholder="verbs_export"
+              />
+              <span class="input-group-text">.csv</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            @click="downloadCombined()"
+          >
+            Download
+          </button>
+        </div>
+
+        <div class="accordion" id="sessionSummaryAccordion">
+          <template x-for="(item, index) in sessionSummary" :key="item.key">
+            <article class="accordion-item modern-card mb-3 border-0 overflow-hidden">
+              <h3 class="accordion-header">
+                <button
+                  class="accordion-button collapsed bg-transparent text-white py-3"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  :data-bs-target="'#summary-collapse-' + index"
+                >
+                  <div class="d-flex flex-column align-items-start">
+                    <strong class="text-uppercase ls-wide" x-text="item.verb"></strong>
+                    <span class="text-muted small" x-text="item.mode + ' | ' + item.tense"></span>
+                  </div>
+                </button>
+              </h3>
+              <div
+                class="accordion-collapse collapse"
+                :id="'summary-collapse-' + index"
+                data-bs-parent="#sessionSummaryAccordion"
+              >
+                <div class="accordion-body border-top border-secondary border-opacity-25 p-0">
+                  <table class="table table-dark table-sm mb-0" style="--bs-table-bg: transparent">
+                    <tbody>
+                      <template x-for="conj in item.conjugations" :key="item.key + '-' + conj.person">
+                        <tr>
+                          <td class="ps-4 py-2 text-muted small" style="width: 35%" x-text="conj.person"></td>
+                          <td class="pe-4 py-2 fw-bold text-white" x-text="conj.value"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                  <div class="p-3 border-top border-secondary border-opacity-25">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      @click="downloadSingle(item)"
+                    >
+                      Download CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
       </div>
     </section>
   </div>
@@ -223,11 +222,14 @@
 <script>
   function scrapeComponent() {
     return {
-      multiScrape: false,
       isProcessing: false,
-      basket: [],
       verb: "",
       filename: "verbs_export",
+      toast: { visible: false, type: "success", message: "" },
+      toastTimer: null,
+      showSummary: false,
+      sessionSummary: [],
+      sessionTasks: [],
       selectedModes: ["Indicativo"],
       selectedTenses: ["Presente"],
       mapping: {
@@ -274,60 +276,93 @@
           ? (this.selectedTenses = [])
           : (this.selectedTenses = [...this.availableTenses]);
       },
-      resetSelections() {
-        this.selectedModes = ["Indicativo"];
-        this.selectedTenses = ["Presente"];
-        this.filename = this.multiScrape
-          ? "verbs_batch_export"
-          : "verbs_export";
+      showToast(type, message) {
+        if (this.toastTimer) {
+          clearTimeout(this.toastTimer);
+        }
+        this.toast = { visible: true, type, message };
+        this.toastTimer = setTimeout(() => {
+          this.hideToast();
+        }, 3000);
       },
-      addToBasket() {
-        const verbClean = this.verb.trim().toLowerCase();
-        if (!verbClean) return;
-        this.selectedModes.forEach((m) => {
-          this.selectedTenses.forEach((t) => {
-            if (this.mapping[m].includes(t)) {
-              if (
-                !this.basket.some(
-                  (i) => i.verb === verbClean && i.mode === m && i.tense === t,
-                )
-              ) {
-                this.basket.push({ verb: verbClean, mode: m, tense: t });
-              }
-            }
-          });
+      hideToast() {
+        if (this.toastTimer) {
+          clearTimeout(this.toastTimer);
+          this.toastTimer = null;
+        }
+        this.toast.visible = false;
+      },
+      upsertSummary(items) {
+        items.forEach((item) => {
+          const key = `${item.verb}|${item.mode}|${item.tense}`;
+          const normalized = { ...item, key };
+          const existingIndex = this.sessionSummary.findIndex((i) => i.key === key);
+          if (existingIndex >= 0) {
+            this.sessionSummary.splice(existingIndex, 1, normalized);
+          } else {
+            this.sessionSummary.unshift(normalized);
+          }
         });
-        this.verb = "";
       },
-      editTask(index) {
-        const task = this.basket[index];
-        this.verb = task.verb;
-        this.selectedModes = [task.mode];
-        this.selectedTenses = [task.tense];
-        this.basket.splice(index, 1);
+      setTasks(tasks) {
+        tasks.forEach((task) => {
+          const exists = this.sessionTasks.some(
+            (t) => t.verb === task.verb && t.mode === task.mode && t.tense === task.tense,
+          );
+          if (!exists) this.sessionTasks.push(task);
+        });
       },
-      async executeBatch() {
-        if (this.basket.length === 0 || this.isProcessing) return;
+      async scrapeNow() {
+        const verbClean = this.verb.trim().toLowerCase();
+        if (!verbClean || this.isProcessing) return;
+
         this.isProcessing = true;
+        this.hideToast();
+
         try {
-          const response = await fetch("/batch-scrape", {
+          const response = await fetch("/scrape-summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              filename: this.filename || "batch_export",
-              tasks: this.basket,
+              verb: verbClean,
+              modes: this.selectedModes,
+              tenses: this.selectedTenses,
+              filename: this.filename || "verbs_export",
             }),
           });
-          const result = await response.json();
-          if (response.ok) window.location.href = result.redirect_url;
-          else {
-            alert("Error: " + result.error);
-            this.isProcessing = false;
+
+          const payload = await response.json();
+          if (!response.ok) {
+            this.showToast("error", payload.error || "Scrape failed.");
+            return;
           }
+
+          this.filename = payload.filename || this.filename;
+          this.setTasks(payload.tasks || []);
+          this.upsertSummary(payload.summary || []);
+          this.showToast("success", payload.message || "Scrape complete.");
+          this.verb = "";
         } catch (error) {
-          alert("Connection Error");
+          this.showToast("error", "Connection error. Please try again.");
+        } finally {
           this.isProcessing = false;
         }
+      },
+      downloadSingle(item) {
+        const basePath = `/export/${encodeURIComponent(item.verb)}`;
+        const url = new URL(basePath, window.location.origin);
+        url.searchParams.append("mode", item.mode);
+        url.searchParams.append("tense", item.tense);
+        if (this.filename) url.searchParams.append("filename", this.filename);
+        window.location.href = url.href;
+      },
+      downloadCombined() {
+        if (!this.sessionTasks.length) return;
+        const basePath = "/export-batch";
+        const url = new URL(basePath, window.location.origin);
+        url.searchParams.append("tasks", JSON.stringify(this.sessionTasks));
+        url.searchParams.append("filename", this.filename || "session_export");
+        window.location.href = url.href;
       },
     };
   }

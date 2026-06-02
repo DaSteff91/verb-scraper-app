@@ -5,7 +5,7 @@ This module verifies that the application correctly handles unauthorized
 access attempts, malformed external HTML, and invalid API payloads.
 """
 
-from typing import Any, Dict
+from typing import Dict
 import requests_mock
 from flask.testing import FlaskClient
 from flask import Flask

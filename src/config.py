@@ -41,5 +41,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # Logging
-    LOG_LEVEL: int = logging.DEBUG
+    _log_level_raw = os.environ.get("LOG_LEVEL", "INFO").strip()
+    if _log_level_raw.isdigit():
+        _resolved_log_level: int = int(_log_level_raw)
+    else:
+        _resolved_log_level = logging.getLevelNamesMapping().get(
+            _log_level_raw.upper(), logging.INFO
+        )
+    LOG_LEVEL: int = _resolved_log_level
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
