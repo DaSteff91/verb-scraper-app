@@ -44,12 +44,12 @@ This file records why specific implementation choices were made, especially wher
 
 ## 2026-06-02 - In-page scrape summary UX
 
-### Context
+### Context (In-page summary UX)
 
 - Redirecting to a separate summary page after scraping interrupted repeated lookup flow.
 - Product direction requested an intrinsic continue-scraping experience on the landing page.
 
-### Decisions
+### Decisions (In-page summary UX)
 
 - **Adopt async in-page scrape (`/scrape-summary`) instead of primary redirect UX**
   - Why: removes context-switch friction and keeps users in the same interaction surface.
@@ -110,3 +110,25 @@ This file records why specific implementation choices were made, especially wher
 
 - **Run semantic-release with verbose logging**
   - Why: exposes branch/release-group resolution details directly in CI logs.
+
+## 2026-06-02 - Landing summary export controls and empty-state filtering
+
+### Context (Summary export + empty-state)
+
+- The in-page landing summary displayed duplicate export controls.
+- The `skip_tu_vos` option still existed in legacy pages but was missing from the active landing flow.
+- Some mode/tense combinations can have no conjugation rows and should not appear as blank summary entries.
+
+### Decisions (Summary export + empty-state)
+
+- **Keep only the primary landing-summary export action**
+  - Why: a single export action avoids conflicting affordances in the same summary view.
+  - Why: this preserves existing batch export contracts while simplifying UX.
+
+- **Restore `Exclude tu / vós` in the landing summary export area**
+  - Why: this makes the export dialect preference visible where users now work.
+  - Why: appending `skip_tu_vos=true` reuses current backend/exporter behavior without API changes.
+
+- **Filter empty combinations in server-side summary builders**
+  - Why: non-existent conjugation combinations should not render blank cards/rows.
+  - Why: backend filtering keeps `/scrape-summary` and `/results-batch` consistent.
