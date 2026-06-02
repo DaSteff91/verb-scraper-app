@@ -69,12 +69,12 @@ This file records why specific implementation choices were made, especially wher
 
 ## 2026-06-02 - Multi-verb input on landing form
 
-### Context
+### Context (Multi-verb input)
 
 - The landing-page scrape input should accept a comma-separated list of verbs (e.g. `sentir, comer, ser`) in addition to single verbs.
 - The submit button label was updated as part of the unified UX, and the input/button height needed to visually match on desktop.
 
-### Decisions
+### Decisions (Multi-verb input)
 
 - **Parse comma-separated verbs in `InputValidator.parse_verbs`**
   - Why: keeps validation logic centralized and ensures every token is still checked against the existing verb whitelist.
@@ -90,3 +90,23 @@ This file records why specific implementation choices were made, especially wher
 - **Align input and submit button height**
   - Why: `fs-3` / `form-control-lg` on the input caused the input to be taller than the button.
   - Why: CSS on `.scrape-verb-row` enforces a matching minimum height.
+
+## 2026-06-02 - Semantic release branch attachment in CI
+
+### Context (Semantic release CI)
+
+- The release workflow is triggered via `workflow_run` and checks out `head_sha` from the completed CI run.
+- `python-semantic-release` requires an attached branch to match release configuration; detached HEAD aborts release-group selection.
+
+### Decisions (Semantic release CI)
+
+- **Keep checkout pinned to tested commit SHA, then attach that commit to the triggering branch**
+  - Why: preserves release safety by operating on the exact commit validated by CI.
+  - Why: satisfies semantic-release branch matching without switching to an unverified branch tip.
+
+- **Add explicit git preflight diagnostics before running semantic-release**
+  - Why: makes detached-head vs branch mismatch obvious from logs without guesswork.
+  - Why: supports faster root-cause analysis for future release incidents.
+
+- **Run semantic-release with verbose logging**
+  - Why: exposes branch/release-group resolution details directly in CI logs.

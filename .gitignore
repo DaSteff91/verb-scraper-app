@@ -30,3 +30,5 @@ scripts/api_tools/exports/bulk_export_20260126_0914.csv
 scripts/api_tools/exports/bulk_export_20260126_1511.csv
 scripts/api_tools/295_irregular_portuguese_verbs.txt
 scripts/api_tools/ranked_irregular_verbs.json
+docs
+docs/decision-log.md

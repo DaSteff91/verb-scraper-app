@@ -27,6 +27,18 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Attach checked commit to workflow branch
+        run: |
+          git checkout -B "${{ github.event.workflow_run.head_branch }}" "${{ github.event.workflow_run.head_sha }}"
+
+      - name: Release preflight diagnostics
+        run: |
+          echo "workflow head branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "workflow head sha: ${{ github.event.workflow_run.head_sha }}"
+          echo "git branch --show-current: $(git branch --show-current)"
+          echo "git rev-parse --abbrev-ref HEAD: $(git rev-parse --abbrev-ref HEAD)"
+          echo "git symbolic-ref --short HEAD: $(git symbolic-ref -q --short HEAD || echo DETACHED)"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,7 +50,7 @@ jobs:
       - name: Run Semantic Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release version
+        run: semantic-release -vv version
 
       - name: Get created version tag
         id: get_version
