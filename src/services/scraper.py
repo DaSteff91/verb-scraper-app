@@ -74,7 +74,11 @@ class ConjugacaoScraper(BaseScraper):
                 if not container or not isinstance(container, Tag):
                     continue
 
-                tense_header = container.find("h4", string=tense)
+                tense_header: Optional[Tag] = None
+                for h4_tag in container.find_all("h4"):
+                    if h4_tag.get_text(strip=True) == tense:
+                        tense_header = h4_tag
+                        break
                 if tense_header and isinstance(tense_header, Tag):
                     conjugation_p = tense_header.find_next_sibling("p")
                     if conjugation_p:

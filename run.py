@@ -35,8 +35,8 @@ def _ensure_local_venv_site_packages() -> None:
 
 _ensure_local_venv_site_packages()
 
-from flask import Flask
-from src import create_app
+from flask import Flask  # noqa: E402
+from src import create_app  # noqa: E402
 
 # Initialize the application instance
 app: Flask = create_app()

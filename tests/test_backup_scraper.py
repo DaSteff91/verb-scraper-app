@@ -1,4 +1,3 @@
-import pytest
 import requests_mock
 from typing import Callable, List, Optional
 from src.services.backup_scraper import CooljugatorScraper

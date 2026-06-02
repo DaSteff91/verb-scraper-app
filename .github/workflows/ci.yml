@@ -96,7 +96,7 @@ jobs:
           pip install pytest pytest-flask pytest-cov requests-mock
 
       - name: Run deterministic test suite
-        run: pytest -m "not online"
+        run: pytest -m "not online" --cov=src --cov-report=xml
 
       - name: Extract coverage percentage
         if: github.event_name == 'push'

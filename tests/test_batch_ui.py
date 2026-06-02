@@ -6,7 +6,7 @@ and the underlying persistence services, including CSV aggregation.
 """
 
 import json
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List
 from flask import Flask
 from flask.testing import FlaskClient
 

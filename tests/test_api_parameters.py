@@ -5,7 +5,7 @@ This module verifies that dialect filtering and Anki-specific formatting
 parameters work correctly on the retrieval endpoint.
 """
 
-from typing import Any, Dict, List
+from typing import Dict, List
 from flask.testing import FlaskClient
 from flask import Flask
 

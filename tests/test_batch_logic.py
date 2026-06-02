@@ -7,7 +7,6 @@ and persists multiple verbs within a single batch execution context.
 
 from typing import TYPE_CHECKING, Dict, List
 
-import pytest
 import requests_mock
 from flask import Flask
 
