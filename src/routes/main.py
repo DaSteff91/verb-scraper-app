@@ -34,6 +34,41 @@ from src.services.validator import InputValidator
 main_bp: Blueprint = Blueprint("main", __name__)
 logger = logging.getLogger(__name__)
 
+_INVALID_VERBS_MSG = (
+    "Invalid verb format. Use comma-separated infinitives (letters and hyphens only)."
+)
+
+
+def _build_scrape_tasks(
+    verbs: List[str], modes: List[str], tenses: List[str]
+) -> List[Dict[str, str]]:
+    """Build deduplicated scrape tasks for every verb × mode × tense combination."""
+    tasks: List[Dict[str, str]] = []
+    seen_tasks: set[tuple[str, str, str]] = set()
+
+    for verb_infinitive in verbs:
+        for mode in modes:
+            for tense in tenses:
+                if not InputValidator.is_valid_grammar(mode, tense):
+                    continue
+                task_key = (verb_infinitive, mode, tense)
+                if task_key in seen_tasks:
+                    continue
+                seen_tasks.add(task_key)
+                tasks.append(
+                    {"verb": task_key[0], "mode": task_key[1], "tense": task_key[2]}
+                )
+
+    return tasks
+
+
+def _default_export_filename(verbs: List[str], custom_filename: str) -> str:
+    if custom_filename:
+        return custom_filename
+    if len(verbs) == 1:
+        return f"{verbs[0]}_export"
+    return "verbs_export"
+
 
 @main_bp.route("/", methods=["GET", "POST"])
 def index() -> Union[str, WerkzeugResponse]:
@@ -62,8 +97,9 @@ def index() -> Union[str, WerkzeugResponse]:
         tenses: List[str] = list(dict.fromkeys(tenses_raw))
 
         # 2. Validate Input
-        if not InputValidator.is_valid_verb(verb_raw):
-            flash("Invalid verb format. Use letters and hyphens.", "danger")
+        verbs = InputValidator.parse_verbs(verb_raw)
+        if verbs is None:
+            flash(_INVALID_VERBS_MSG, "danger")
             return render_template("index.html")
 
         if not modes or not tenses:
@@ -71,26 +107,16 @@ def index() -> Union[str, WerkzeugResponse]:
             return render_template("index.html")
 
         # 3. Sanitize and prepare task list
-        verb_infinitive: str = verb_raw.lower()
-        tasks: List[Dict[str, str]] = []
-
-        seen_tasks: set[tuple[str, str, str]] = set()
-        for mode in modes:
-            for tense in tenses:
-                # Only add combinations that are grammatically valid
-                if InputValidator.is_valid_grammar(mode, tense):
-                    task_key = (verb_infinitive, mode, tense)
-                    if task_key in seen_tasks:
-                        continue
-                    seen_tasks.add(task_key)
-                    tasks.append({"verb": task_key[0], "mode": task_key[1], "tense": task_key[2]})
+        tasks = _build_scrape_tasks(verbs, modes, tenses)
 
         if not tasks:
             flash("No valid grammatical combinations were selected.", "danger")
             return render_template("index.html")
 
         if action == "cart":
-            flash("Use 'Add to Cart' for queueing items before batch scraping.", "warning")
+            flash(
+                "Use 'Add to Cart' for queueing items before batch scraping.", "warning"
+            )
             return render_template("index.html")
 
         # 4. Lazy Import and Process Batch
@@ -104,9 +130,9 @@ def index() -> Union[str, WerkzeugResponse]:
 
         if success_count > 0:
             logger.info(
-                "Successfully processed %d combinations for verb: %s",
+                "Successfully processed %d combinations for verbs: %s",
                 success_count,
-                verb_infinitive,
+                ", ".join(verbs),
             )
 
             if failed_count > 0:
@@ -115,9 +141,7 @@ def index() -> Union[str, WerkzeugResponse]:
                     "warning",
                 )
 
-            filename = (
-                custom_filename if custom_filename else f"{verb_infinitive}_export"
-            )
+            filename = _default_export_filename(verbs, custom_filename)
 
             # Redirect to results_batch to show the accordion of all selected tenses
             return redirect(
@@ -129,12 +153,18 @@ def index() -> Union[str, WerkzeugResponse]:
             )
 
         logger.warning(
-            "Failed to process any combinations for verb: %s", verb_infinitive
+            "Failed to process any combinations for verbs: %s", ", ".join(verbs)
         )
-        flash(
-            f"Could not find the verb '{verb_infinitive}' for the selected tenses.",
-            "danger",
-        )
+        if len(verbs) == 1:
+            flash(
+                f"Could not find the verb '{verbs[0]}' for the selected tenses.",
+                "danger",
+            )
+        else:
+            flash(
+                "Could not scrape any of the selected combinations.",
+                "danger",
+            )
 
     return render_template("index.html")
 
@@ -156,8 +186,9 @@ def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
     tenses_raw: Any = json_data.get("tenses", [])
     custom_filename: str = str(json_data.get("filename", "")).strip()
 
-    if not InputValidator.is_valid_verb(verb_raw):
-        return jsonify({"error": "Invalid verb format. Use letters and hyphens."}), 400
+    verbs = InputValidator.parse_verbs(verb_raw)
+    if verbs is None:
+        return jsonify({"error": _INVALID_VERBS_MSG}), 400
 
     if not isinstance(modes_raw, list) or not isinstance(tenses_raw, list):
         return jsonify({"error": "Modes and tenses must be lists."}), 400
@@ -168,23 +199,13 @@ def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
     if not modes or not tenses:
         return jsonify({"error": "Please select at least one mode and one tense."}), 400
 
-    verb_infinitive: str = verb_raw.lower()
-    tasks: List[Dict[str, str]] = []
-    seen_tasks: set[tuple[str, str, str]] = set()
-
-    for mode in modes:
-        for tense in tenses:
-            if InputValidator.is_valid_grammar(mode, tense):
-                task_key = (verb_infinitive, mode, tense)
-                if task_key in seen_tasks:
-                    continue
-                seen_tasks.add(task_key)
-                tasks.append(
-                    {"verb": task_key[0], "mode": task_key[1], "tense": task_key[2]}
-                )
+    tasks = _build_scrape_tasks(verbs, modes, tenses)
 
     if not tasks:
-        return jsonify({"error": "No valid grammatical combinations were selected."}), 400
+        return (
+            jsonify({"error": "No valid grammatical combinations were selected."}),
+            400,
+        )
 
     from src.services.verb_manager import VerbManager
 
@@ -194,12 +215,17 @@ def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
     failed_count = summary.get("failed", 0)
 
     if success_count == 0:
+        if len(verbs) == 1:
+            return (
+                jsonify(
+                    {
+                        "error": f"Could not find the verb '{verbs[0]}' for the selected tenses."
+                    }
+                ),
+                404,
+            )
         return (
-            jsonify(
-                {
-                    "error": f"Could not find the verb '{verb_infinitive}' for the selected tenses."
-                }
-            ),
+            jsonify({"error": "Could not scrape any of the selected combinations."}),
             404,
         )
 
@@ -231,7 +257,7 @@ def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
             }
         )
 
-    filename = custom_filename if custom_filename else f"{verb_infinitive}_export"
+    filename = _default_export_filename(verbs, custom_filename)
     response_payload: Dict[str, Any] = {
         "status": "success",
         "message": f"Scrape complete: {success_count} selection(s) ready.",

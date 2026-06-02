@@ -17,7 +17,7 @@ def test_index_route_get(client: FlaskClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert b"Portuguese Infinitive" in response.data
-    assert b"Scrape Now" in response.data
+    assert b"Scrape" in response.data
     assert b"Add to Cart" not in response.data
     assert b"Scrape Summary" in response.data
 
@@ -69,6 +69,55 @@ def test_scrape_form_submission_dedupes_duplicate_tenses(
     data = response.get_json()
     assert len(data["tasks"]) == 1
     assert len(data["summary"]) == 1
+
+
+def test_scrape_form_submission_multiple_verbs(
+    client: FlaskClient, requests_mock: requests_mock.Mocker, sample_html
+) -> None:
+    """Verify the scrape summary endpoint supports comma-separated infinitives."""
+    requests_mock.get(
+        "https://www.conjugacao.com.br/verbo-falar/",
+        text=sample_html("falar.html"),
+    )
+    requests_mock.get(
+        "https://www.conjugacao.com.br/verbo-ir/",
+        text=sample_html("ir.html"),
+    )
+
+    response = client.post(
+        "/scrape-summary",
+        json={
+            "verb": "falar, ir",
+            "modes": ["Indicativo"],
+            "tenses": ["Presente"],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "success"
+
+    # One (verb × mode × tense) task per verb
+    assert len(data["tasks"]) == 2
+    assert len(data["summary"]) == 2
+    assert data["summary"][0]["verb"] == "falar"
+    assert data["summary"][1]["verb"] == "ir"
+
+
+def test_scrape_form_submission_rejects_invalid_multi_verb(
+    client: FlaskClient,
+) -> None:
+    """Verify a single invalid token in a multi-verb input is rejected."""
+    response = client.post(
+        "/scrape-summary",
+        json={
+            "verb": "falar, bad_verb; DROP TABLE",
+            "modes": ["Indicativo"],
+            "tenses": ["Presente"],
+        },
+    )
+    assert response.status_code == 400
+    assert "Invalid verb format" in response.get_json()["error"]
 
 
 def test_scrape_summary_rejects_invalid_payload(client: FlaskClient) -> None:

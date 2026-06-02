@@ -124,3 +124,17 @@ fieldset legend {
   border: 1px solid var(--border-idle);
   border-radius: var(--radius);
 }
+
+/* Keep verb input aligned with submit button */
+.scrape-verb-row .form-control,
+.scrape-verb-row .btn[type="submit"] {
+  min-height: 3rem; /* match Bootstrap-ish button padding */
+}
+
+/* Desktop alignment: vertically center the button in its column */
+@media (min-width: 576px) {
+  .scrape-verb-row .col-sm-4 {
+    display: flex;
+    align-items: center;
+  }
+}
