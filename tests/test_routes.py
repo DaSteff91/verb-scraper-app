@@ -20,6 +20,7 @@ def test_index_route_get(client: FlaskClient) -> None:
     assert b"Scrape" in response.data
     assert b"Add to Cart" not in response.data
     assert b"Scrape Summary" in response.data
+    assert b"Exclude tu / v\xc3\xb3s" in response.data
 
 
 def test_scrape_form_submission_success(
@@ -167,6 +168,14 @@ def test_export_csv_route_no_data(client: FlaskClient) -> None:
     # The route uses first_or_404(), so we expect a 404.
     response = client.get("/export/nonexistentverb?mode=Indicativo&tense=Presente")
     assert response.status_code == 404
+
+
+def test_index_template_wires_skip_tu_vos_download_flag(client: FlaskClient) -> None:
+    """Verify landing-page summary download supports skip_tu_vos toggle."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"skipTuVos: true" in response.data
+    assert b"skip_tu_vos" in response.data
 
 
 def test_scrape_form_failure_handling(

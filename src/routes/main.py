@@ -245,6 +245,8 @@ def scrape_summary() -> tuple[WerkzeugResponse, int] | WerkzeugResponse:
             )
             .all()
         )
+        if not conjs:
+            continue
 
         batch_display.append(
             {
@@ -478,6 +480,8 @@ def results_batch() -> str:
             )
             .all()
         )
+        if not conjs:
+            continue
 
         batch_display.append(
             {
