@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.24.0 (2026-06-02)
+
+### Bug Fixes
+
+- Release job previously checked out only head_sha, which created detached HEAD
+  ([`e4837a9`](https://github.com/DaSteff91/verb-scraper-app/commit/e4837a99c4fbfbe94339009fc17a1200196977cb))
+
+- **deploy**: Gate workflow_run deploy jobs to main branch
+  ([`5a2c56f`](https://github.com/DaSteff91/verb-scraper-app/commit/5a2c56f6e416bc18c7d6eadf0ec040d059161cea))
+
+
 ## v1.23.4 (2026-06-02)
 
 ### Bug Fixes
