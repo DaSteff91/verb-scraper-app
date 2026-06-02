@@ -52,9 +52,14 @@ def index() -> Union[str, WerkzeugResponse]:
         # 1. Extract raw form data
         # Use getlist to capture multiple selections from the AlpineJS UI
         verb_raw: str = request.form.get("verb", "").strip()
-        modes: List[str] = request.form.getlist("mode")
-        tenses: List[str] = request.form.getlist("tense")
+        modes_raw: List[str] = request.form.getlist("mode")
+        tenses_raw: List[str] = request.form.getlist("tense")
         custom_filename: str = request.form.get("filename", "").strip()
+        action: str = request.form.get("action", "single").strip().lower()
+
+        # Normalize list payloads while preserving first-seen order.
+        modes: List[str] = list(dict.fromkeys(modes_raw))
+        tenses: List[str] = list(dict.fromkeys(tenses_raw))
 
         # 2. Validate Input
         if not InputValidator.is_valid_verb(verb_raw):
@@ -69,16 +74,23 @@ def index() -> Union[str, WerkzeugResponse]:
         verb_infinitive: str = verb_raw.lower()
         tasks: List[Dict[str, str]] = []
 
+        seen_tasks: set[tuple[str, str, str]] = set()
         for mode in modes:
             for tense in tenses:
                 # Only add combinations that are grammatically valid
                 if InputValidator.is_valid_grammar(mode, tense):
-                    tasks.append(
-                        {"verb": verb_infinitive, "mode": mode, "tense": tense}
-                    )
+                    task_key = (verb_infinitive, mode, tense)
+                    if task_key in seen_tasks:
+                        continue
+                    seen_tasks.add(task_key)
+                    tasks.append({"verb": task_key[0], "mode": task_key[1], "tense": task_key[2]})
 
         if not tasks:
             flash("No valid grammatical combinations were selected.", "danger")
+            return render_template("index.html")
+
+        if action == "cart":
+            flash("Use 'Add to Cart' for queueing items before batch scraping.", "warning")
             return render_template("index.html")
 
         # 4. Lazy Import and Process Batch
@@ -274,8 +286,6 @@ def batch_scrape() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     filename: str = str(json_data.get("filename", "batch_export"))
 
     # Validate batch data integrity
-    from src.services.validator import InputValidator
-
     if not InputValidator.validate_batch(tasks):
         logger.warning("Batch validation failed for: %s", tasks)
         return jsonify({"error": "Batch contains invalid data"}), 400

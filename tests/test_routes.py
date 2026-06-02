@@ -9,8 +9,7 @@ import time
 from flask.testing import FlaskClient
 from typing import Dict, Any
 import requests_mock
-from src.models.verb import BatchJob
-from src.extensions import db
+from werkzeug.datastructures import MultiDict
 from src.services.verb_manager import VerbManager
 
 
@@ -19,6 +18,8 @@ def test_index_route_get(client: FlaskClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert b"Portuguese Infinitive" in response.data
+    assert b"Scrape Now" in response.data
+    assert b"Add to Cart" in response.data
 
 
 def test_scrape_form_submission_success(
@@ -32,7 +33,12 @@ def test_scrape_form_submission_success(
     # Simulate form POST
     response = client.post(
         "/",
-        data={"verb": "falar", "mode": "Indicativo", "tense": "Presente"},
+        data={
+            "verb": "falar",
+            "mode": "Indicativo",
+            "tense": "Presente",
+            "action": "single",
+        },
         follow_redirects=True,
     )
 
@@ -41,6 +47,50 @@ def test_scrape_form_submission_success(
     assert b"Batch Scrape Summary" in response.data
     assert b"falar" in response.data
     assert b"eu falo" in response.data
+
+
+def test_scrape_form_submission_dedupes_duplicate_tenses(
+    client: FlaskClient, requests_mock: requests_mock.Mocker, sample_html
+) -> None:
+    """Verify duplicate tense fields do not produce duplicate result blocks."""
+    mock_content = sample_html("falar.html")
+    requests_mock.get("https://www.conjugacao.com.br/verbo-falar/", text=mock_content)
+
+    response = client.post(
+        "/",
+        data=MultiDict(
+            [
+                ("verb", "falar"),
+                ("mode", "Indicativo"),
+                ("tense", "Presente"),
+                ("tense", "Presente"),
+                ("action", "single"),
+            ]
+        ),
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Batch Scrape Summary" in response.data
+    assert b"eu falo" in response.data
+    assert response.data.count(b"Indicativo | Presente") == 1
+
+
+def test_scrape_form_action_cart_does_not_trigger_scrape(client: FlaskClient) -> None:
+    """Verify server-side action guard keeps cart intent from scraping route."""
+    response = client.post(
+        "/",
+        data={
+            "verb": "falar",
+            "mode": "Indicativo",
+            "tense": "Presente",
+            "action": "cart",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Use &#39;Add to Cart&#39; for queueing items before batch scraping." in response.data
 
 
 def test_export_csv_route_success(

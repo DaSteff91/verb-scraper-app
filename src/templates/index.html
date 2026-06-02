@@ -1,43 +1,9 @@
 {% extends "base.html" %} {% block content %}
 <div class="row justify-content-center" x-data="scrapeComponent()">
   <div class="col-12 col-lg-10 col-xl-8">
-    <!-- Multi-Mode Switch Card -->
-    <section
-      class="modern-card p-4 mb-4 d-flex align-items-center justify-content-between"
-      aria-labelledby="multi-mode-label"
-    >
-      <div>
-        <h2
-          id="multi-mode-label"
-          class="h6 mb-1 fw-bold text-white text-uppercase"
-        >
-          Multi-Scraping Mode
-        </h2>
-        <p class="text-muted small mb-0">
-          Aggregate multiple tenses into a single batch
-        </p>
-      </div>
-      <div class="form-check form-switch p-0 m-0">
-        <!-- Large, high-contrast switch -->
-        <input
-          class="form-check-input ms-0"
-          type="checkbox"
-          id="multiToggle"
-          role="switch"
-          x-model="multiScrape"
-          @change="resetSelections()"
-          aria-label="Toggle Multi-Scraping"
-        />
-      </div>
-    </section>
-
     <!-- Main Form Card -->
     <section class="modern-card p-4 p-md-5 mb-5">
-      <form
-        method="POST"
-        id="scrapeForm"
-        x-on:submit="if(multiScrape) { $event.preventDefault(); addToBasket(); }"
-      >
+      <form method="POST" id="scrapeForm">
         <!-- Dynamically generate hidden inputs for all selections -->
         <template x-for="m in selectedModes" :key="'hidden-mode-' + m">
           <input type="hidden" name="mode" :value="m" />
@@ -46,8 +12,8 @@
         <template x-for="t in selectedTenses" :key="'hidden-tense-' + t">
           <input type="hidden" name="tense" :value="t" />
         </template>
-        <input type="hidden" name="tense" :value="selectedTenses[0]" />
         <input type="hidden" name="filename" :value="filename" />
+        <input type="hidden" name="action" :value="formAction" />
 
         <div class="mb-5">
           <label for="verb" class="form-label small text-uppercase mb-3"
@@ -122,7 +88,7 @@
         <!-- Footer Action Bar -->
         <div class="mt-5 pt-4 border-top border-secondary">
           <div class="row align-items-center g-4">
-            <div class="col-md-7" x-show="!multiScrape" x-transition>
+            <div class="col-md-7">
               <label
                 for="single-filename"
                 class="form-label small text-uppercase mb-2"
@@ -139,12 +105,23 @@
                 <span class="input-group-text">.csv</span>
               </div>
             </div>
-            <div :class="multiScrape ? 'col-12' : 'col-md-5'">
-              <button type="submit" class="btn btn-primary w-100 py-3">
-                <span
-                  x-text="multiScrape ? 'Add to Batch' : 'Start Scrape'"
-                ></span>
-              </button>
+            <div class="col-md-5">
+              <div class="d-grid gap-2">
+                <button
+                  type="submit"
+                  class="btn btn-primary w-100 py-3"
+                  @click="setAction('single')"
+                >
+                  Scrape Now
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary w-100 py-2"
+                  @click="setAction('cart'); addToBasket()"
+                >
+                  Add to Cart
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -152,7 +129,7 @@
     </section>
 
     <!-- Batch List -->
-    <section x-show="multiScrape && basket.length > 0" x-transition>
+    <section x-show="basket.length > 0" x-transition>
       <h2 class="h6 fw-bold text-uppercase text-white mb-4">Batch Queue</h2>
       <div class="list-group mb-4">
         <template x-for="(task, index) in basket" :key="index">
@@ -223,11 +200,11 @@
 <script>
   function scrapeComponent() {
     return {
-      multiScrape: false,
       isProcessing: false,
       basket: [],
       verb: "",
       filename: "verbs_export",
+      formAction: "single",
       selectedModes: ["Indicativo"],
       selectedTenses: ["Presente"],
       mapping: {
@@ -274,12 +251,8 @@
           ? (this.selectedTenses = [])
           : (this.selectedTenses = [...this.availableTenses]);
       },
-      resetSelections() {
-        this.selectedModes = ["Indicativo"];
-        this.selectedTenses = ["Presente"];
-        this.filename = this.multiScrape
-          ? "verbs_batch_export"
-          : "verbs_export";
+      setAction(action) {
+        this.formAction = action;
       },
       addToBasket() {
         const verbClean = this.verb.trim().toLowerCase();

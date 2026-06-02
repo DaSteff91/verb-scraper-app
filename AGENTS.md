@@ -34,6 +34,13 @@ The app validates grammar inputs, stores normalized conjugation data in SQLite v
 - Keep type hints and validation behavior aligned with current patterns.
 - Follow `CONTRIBUTING.md` for branch flow and required validation commands.
 
+## Decision Log Usage (Mandatory)
+
+- Before implementing or reviewing work, read `docs/decision-log.md` to understand prior rationale and trade-offs.
+- Treat the decision log as implementation intent: prefer solutions that stay aligned with recorded decisions unless the user requests a change.
+- When you intentionally deviate from a logged decision, document the new rationale in `docs/decision-log.md` in the same session.
+- For non-obvious choices, add a concise "why" entry to `docs/decision-log.md` so future agents inherit context.
+
 ## Python Code Standards (Repository-Observed)
 
 - Use module-level docstrings that explain intent and system role, not only syntax details.
