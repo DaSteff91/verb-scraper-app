@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v1.23.4 (2026-06-02)
+
+### Bug Fixes
+
+- Add new path and files to ignore
+  ([`ee2e023`](https://github.com/DaSteff91/verb-scraper-app/commit/ee2e023e8800e123923a685ba2c80b84b83e31e2))
+
+### Chores
+
+- **ci**: Add dev integration branch workflow
+  ([`ab22980`](https://github.com/DaSteff91/verb-scraper-app/commit/ab22980a4386e82c143323a6d05131a3f1e8c01a))
+
+### Documentation
+
+- Fixed a hardcoded secret
+  ([`af76940`](https://github.com/DaSteff91/verb-scraper-app/commit/af76940db6db66f966f5c64b629d7f806512e642))
+
+- Prelimminary merge. Small docu changes only (done in the wrong branch)
+  ([`77ce822`](https://github.com/DaSteff91/verb-scraper-app/commit/77ce8225b72f078900c105b5330a127ccb273fce))
+
+
 ## v1.23.3 (2026-02-03)
 
 ### Bug Fixes
