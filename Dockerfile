@@ -34,8 +34,9 @@ USER appuser
 EXPOSE $PORT
 
 # 10. Run the application using Gunicorn
-# --bind 0.0.0.0:$PORT makes the app accessible outside the container
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "1", "--threads", "4", "--worker-class", "gthread", "run:app"]
+# --bind 0.0.0.0:$PORT listens inside the container; publish 127.0.0.1 on the host
+# threads=8 leaves headroom for health probes while scrapes use a capped pool
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "1", "--threads", "8", "--worker-class", "gthread", "--timeout", "120", "--graceful-timeout", "30", "--access-logfile", "-", "--error-logfile", "-", "run:app"]
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \
     CMD python3 /app/healthcheck.py

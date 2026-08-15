@@ -66,3 +66,27 @@ def test_api_health_check_success(client: FlaskClient, app: Flask) -> None:
     assert data["checks"]["database"] == "ok"
     assert data["checks"]["storage"] == "ok"
     assert data["checks"]["readiness"] == "ok"
+
+
+def test_api_health_live_success(client: FlaskClient, app: Flask) -> None:
+    """
+    Verify the shallow liveness probe returns 200 without deep checks.
+    """
+    api_key: str = app.config["API_KEY"]
+    headers: Dict[str, str] = {"X-API-KEY": api_key}
+
+    response = client.get("/api/v1/health/live", headers=headers)
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert "timestamp" in data
+    assert "checks" not in data
+
+
+def test_api_health_live_requires_api_key(client: FlaskClient) -> None:
+    """
+    Verify the liveness probe rejects missing API keys.
+    """
+    response = client.get("/api/v1/health/live")
+    assert response.status_code == 401

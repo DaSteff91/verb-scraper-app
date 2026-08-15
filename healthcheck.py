@@ -14,14 +14,14 @@ from typing import NoReturn
 
 def check_health() -> NoReturn:
     """
-    Performs an internal HTTP request to the diagnostic health endpoint.
+    Performs an internal HTTP request to the shallow liveness endpoint.
 
-    Queries the local Gunicorn instance. Exits with code 0 if the status
-    is healthy (200 OK), otherwise exits with code 1 to signal an
-    unhealthy state to the Docker engine.
+    Queries the local Gunicorn instance via /api/v1/health/live. Exits with
+    code 0 if the status is healthy (200 OK), otherwise exits with code 1 to
+    signal an unhealthy state to the Docker engine.
     """
     # Use 127.0.0.1 to stay strictly inside the container loopback
-    url: str = "http://127.0.0.1:5050/api/v1/health"
+    url: str = "http://127.0.0.1:5050/api/v1/health/live"
     api_key: str = os.environ.get("API_KEY", "")
     timeout: int = 5
 

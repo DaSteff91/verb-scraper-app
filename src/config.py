@@ -8,6 +8,7 @@ used to initialize the Flask app context.
 import os
 import logging
 from pathlib import Path
+from typing import Any, Dict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -39,6 +40,10 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI: str = f"sqlite:///{INSTANCE_PATH / 'app.db'}"
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    # timeout: wait on locks; check_same_thread=False for gthread + batch threads
+    SQLALCHEMY_ENGINE_OPTIONS: Dict[str, Any] = {
+        "connect_args": {"timeout": 30, "check_same_thread": False},
+    }
 
     # Logging
     _log_level_raw = os.environ.get("LOG_LEVEL", "INFO").strip()
