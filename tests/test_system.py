@@ -2,7 +2,6 @@
 Tests for System Maintenance, Validation, and Health Monitoring.
 """
 
-from typing import Dict
 from flask.testing import FlaskClient
 from flask import Flask
 from datetime import datetime, timedelta, UTC
@@ -56,7 +55,7 @@ def test_api_health_check_success(client: FlaskClient, app: Flask) -> None:
     Verify the health check endpoint returns 200 and a full report.
     """
     api_key: str = app.config["API_KEY"]
-    headers: Dict[str, str] = {"X-API-KEY": api_key}
+    headers: dict[str, str] = {"X-API-KEY": api_key}
 
     response = client.get("/api/v1/health", headers=headers)
     assert response.status_code == 200
@@ -73,7 +72,7 @@ def test_api_health_live_success(client: FlaskClient, app: Flask) -> None:
     Verify the shallow liveness probe returns 200 without deep checks.
     """
     api_key: str = app.config["API_KEY"]
-    headers: Dict[str, str] = {"X-API-KEY": api_key}
+    headers: dict[str, str] = {"X-API-KEY": api_key}
 
     response = client.get("/api/v1/health/live", headers=headers)
     assert response.status_code == 200
