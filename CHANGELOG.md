@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.24.3 (2026-08-15)
+
+### Bug Fixes
+
+- **ci**: Ignore flaky GHA buildx cache export failures
+  ([`fb12870`](https://github.com/DaSteff91/verb-scraper-app/commit/fb12870ff82ec70cce3920535b7644069ff65437))
+
+
 ## v1.24.2 (2026-08-15)
 
 ### Bug Fixes
