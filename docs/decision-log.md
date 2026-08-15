@@ -132,3 +132,38 @@ This file records why specific implementation choices were made, especially wher
 - **Filter empty combinations in server-side summary builders**
   - Why: non-existent conjugation combinations should not render blank cards/rows.
   - Why: backend filtering keeps `/scrape-summary` and `/results-batch` consistent.
+
+## 2026-08-15 - Worker FD / healthcheck hardening
+
+### Context (Netdata FD warning)
+
+- Production gunicorn worker approached the soft `nofile` limit (~1024) with mostly
+  `127.0.0.1:5050` `CLOSE-WAIT` sockets from Docker HEALTHCHECK while the worker
+  could not finish accepted connections.
+- App scrape/API logs and SQLite job history for the incident window were empty;
+  treated as runtime fragility (1 worker × few threads + deep HC + sync scrapes),
+  not a new feature regression.
+- UI `/scrape-summary` and form POST contracts must stay synchronous per prior UX decisions.
+
+### Decisions (Worker FD / healthcheck hardening)
+
+- **Split Docker liveness (`/api/v1/health/live`) from deep diagnostics (`/api/v1/health`)**
+  - Why: probes every 30s should not write `.health_test` or run seed/readiness queries.
+  - Why: deep `/health` remains for ops/smoke; `healthcheck.py` targets `/health/live`.
+
+- **Raise gunicorn thread count, timeouts, and access logs; raise container `nofile`**
+  - Why: more gthread slots leave headroom for HC and GETs during scrapes.
+  - Why: access logs on stdout make silent load diagnosable without guessing.
+  - Why: soft limit 1024 made CLOSE-WAIT accumulation fatal quickly.
+
+- **Publish `127.0.0.1:5050` only (compose + deploy)**
+  - Why: host Caddy terminates TLS for `conjugator.kite-engineer.de`; raw internet on
+    the app port was unnecessary attack/scan surface.
+
+- **Cap `process_batch` at `ThreadPoolExecutor(max_workers=2)` + process-wide semaphore**
+  - Why: overlapping UI/API batches must not stack executors that pin all gunicorn threads.
+  - Why: keep sync UI contracts; do not rewrite landing scrapes to `BatchJob` 202 polling.
+
+- **SQLite `busy_timeout` / connect timeout + WAL**
+  - Why: threaded scrapes and health pings contend on one DB file; fail-soft waits beat
+    immediate lock errors that can stall request handling.

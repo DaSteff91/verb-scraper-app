@@ -8,6 +8,7 @@ single-task and concurrent batch processing.
 
 import logging
 import random
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -21,6 +22,11 @@ from src.services.scraper import ConjugacaoScraper
 from src.services.backup_scraper import CooljugatorScraper
 
 logger = logging.getLogger(__name__)
+
+# Serialize heavy scrape batches so overlapping UI/API jobs cannot stack
+# ThreadPoolExecutors on top of the limited gunicorn gthread pool.
+_BATCH_EXECUTION_LOCK = threading.BoundedSemaphore(1)
+_BATCH_POOL_WORKERS = 2
 
 
 class VerbManager:
@@ -222,8 +228,20 @@ class VerbManager:
 
         logger.info("Starting batch execution for %d tasks...", len(tasks))
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            outcomes = list(executor.map(threaded_task, tasks))
+        acquired = _BATCH_EXECUTION_LOCK.acquire(blocking=False)
+        if not acquired:
+            logger.info(
+                "Batch execution waiting for in-flight scrape work to finish (%d tasks).",
+                len(tasks),
+            )
+            _BATCH_EXECUTION_LOCK.acquire()
+            logger.info("Batch execution lock acquired; starting %d tasks.", len(tasks))
+
+        try:
+            with ThreadPoolExecutor(max_workers=_BATCH_POOL_WORKERS) as executor:
+                outcomes = list(executor.map(threaded_task, tasks))
+        finally:
+            _BATCH_EXECUTION_LOCK.release()
 
         results["success"] = outcomes.count(True)
         results["failed"] = outcomes.count(False)

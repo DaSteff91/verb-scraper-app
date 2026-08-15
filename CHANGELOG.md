@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.24.1 (2026-06-02)
+
+### Bug Fixes
+
+- Release job previously checked out only head_sha, which created detached HEAD
+  ([`0a14fc3`](https://github.com/DaSteff91/verb-scraper-app/commit/0a14fc3d18fea01092302c75a42f38ccbda08895))
+
+- **tests**: Format batch UI assertion for black compliance
+  ([`87126bf`](https://github.com/DaSteff91/verb-scraper-app/commit/87126bffa62a4a832273d8634f05a4fc6b5da382))
+
+- **ui**: Streamline summary export controls and hide empty combinations
+  ([`42fb28b`](https://github.com/DaSteff91/verb-scraper-app/commit/42fb28b94a3f6e4d9fcc4eaf079761302dba2078))
+
+- **ui**: Streamline summary export controls and hide empty combinations
+  ([`e9a02e7`](https://github.com/DaSteff91/verb-scraper-app/commit/e9a02e7e85f9bb97a98db0592bb9d3cf5b61a1b0))
+
+### Documentation
+
+- **readme**: Document in-page summary export behavior
+  ([`5c52089`](https://github.com/DaSteff91/verb-scraper-app/commit/5c520891e040f069ceb391705f4ef2c40bf47ea5))
+
+
 ## v1.24.0 (2026-06-02)
 
 ### Bug Fixes

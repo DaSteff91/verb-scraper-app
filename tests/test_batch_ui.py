@@ -77,7 +77,9 @@ def test_results_batch_skips_empty_conjugation_cards(
         manager.get_or_create_verb_data("falar", "Indicativo", "Presente")
 
     tasks = [{"verb": "falar", "mode": "Indicativo", "tense": "Futuro do Pretérito"}]
-    response = client.get(f"/results-batch?tasks={json.dumps(tasks)}&filename=test_batch")
+    response = client.get(
+        f"/results-batch?tasks={json.dumps(tasks)}&filename=test_batch"
+    )
 
     assert response.status_code == 200
     assert b"No verbs found in the database for this batch." in response.data

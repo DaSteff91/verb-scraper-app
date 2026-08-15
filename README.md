@@ -40,11 +40,21 @@ A more comprehensive guide will follow.
   - **Diagnostic Health Checks:** Endpoint for verifying DB connectivity, filesystem write permissions, and system seeding status.
   - **Dialect Normalization:** Automatic filtering of second-person forms (_tu_/_vós_) for Brazilian Portuguese study requirements.
 - **User Interface:**
-  - **Scrape Basket:** Alpine.js-powered frontend for building batch requests locally before submission.
-  - **Dynamic Results Dashboard:** Accordion-style views for reviewing batch results.
+  - **In-Page Scrape Summary:** Alpine.js-powered landing page keeps users on `/` and updates summary results asynchronously.
+  - **Responsive Summary Controls:** On the landing summary, export filename, `Exclude tu / vós` toggle, and `Download` control are optimized for mobile/desktop layouts.
+  - **Dynamic Results Dashboard:** Accordion-style views for reviewing summary and batch results.
 - **Export Capabilities:**
   - **Anki Integration:** CSV generation using byte-streams with UTF-8-SIG encoding for direct import into flashcard software.
   - **Native Formatting:** Supports newline-separated values within CSV fields for card styling.
+  - **Dialect Toggle in Web UI:** `Exclude tu / vós` in the landing summary appends `skip_tu_vos=true` for combined CSV exports.
+
+## Web UI Behavior Notes
+
+- The landing page (`/`) is the primary scrape flow:
+  - supports one verb or comma-separated verbs,
+  - updates the `Scrape Summary` accordion in-page via `/scrape-summary`,
+  - keeps a single combined export action (`Download`) in the opened summary.
+- Non-existent mode/tense combinations (empty conjugation payloads) are filtered out and not shown as blank cards in summary/batch displays.
 
 
 ## Directory Structure

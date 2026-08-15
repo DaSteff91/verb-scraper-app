@@ -300,6 +300,40 @@ def handle_api_exception(e: Exception) -> tuple[WerkzeugResponse, int]:
     return response, 500
 
 
+@api_bp.route("/health/live", methods=["GET"])
+def health_live() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+    """
+    Shallow liveness probe for Docker HEALTHCHECK.
+
+    Confirms the worker can answer HTTP and run a trivial DB ping.
+    Avoids filesystem writes and seed/readiness checks so probes do not
+    compete with scrape work under load. Secured via API Key authentication.
+    """
+    # 1. Lazy Import the gatekeeper for memory optimization
+    from src.services.auth import require_api_key
+
+    @require_api_key
+    def handle_live() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
+        try:
+            # 2. Cheap connectivity check only
+            db.session.execute(text("SELECT 1"))
+        except Exception as e:
+            logger.error("Liveness Check: Database failure: %s", e)
+            return jsonify({"status": "unhealthy", "error": str(e)}), 503
+
+        return (
+            jsonify(
+                {
+                    "status": "ok",
+                    "timestamp": datetime.now(UTC).timestamp(),
+                }
+            ),
+            200,
+        )
+
+    return handle_live()
+
+
 @api_bp.route("/health", methods=["GET"])
 def health_check() -> Union[WerkzeugResponse, tuple[WerkzeugResponse, int]]:
     """

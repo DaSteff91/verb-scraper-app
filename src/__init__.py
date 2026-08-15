@@ -5,14 +5,33 @@ This module contains the function to create and configure the Flask application.
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 from flask import Flask
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from src.config import Config
 from src.extensions import db
 
-__version__ = "1.24.0"
+__version__ = "1.24.1"
+
+
+@event.listens_for(Engine, "connect")
+def _configure_sqlite_connection(
+    dbapi_connection: Any, _connection_record: Any
+) -> None:
+    """
+    Apply SQLite pragmas that improve concurrent scrape + healthcheck behavior.
+    """
+    # This app is SQLite-only; skip non-sqlite DBAPI modules defensively.
+    module_name = type(dbapi_connection).__module__
+    if "sqlite" not in module_name:
+        return
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    cursor.close()
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:

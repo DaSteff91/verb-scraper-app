@@ -100,7 +100,8 @@ jobs:
             docker run -d \
               --name "$CONTAINER_NAME" \
               --restart unless-stopped \
-              -p "$PORT_HOST:5050" \
+              -p "127.0.0.1:$PORT_HOST:5050" \
+              --ulimit nofile=65536:65536 \
               -v "$APP_DIR/instance:/app/instance" \
               --env-file "$APP_DIR/.env" \
               "$FULL_IMAGE_PATH"
