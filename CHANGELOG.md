@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.24.2 (2026-08-15)
+
+### Bug Fixes
+
+- **ci**: Pin ruff to avoid UP-rule flood on unpinned latest
+  ([`feb8ca3`](https://github.com/DaSteff91/verb-scraper-app/commit/feb8ca39a553b49e0bdb99111c85adfd5d90236b))
+
+- **runtime**: Harden worker against FD exhaustion under healthchecks
+  ([`a5efdd0`](https://github.com/DaSteff91/verb-scraper-app/commit/a5efdd03e245961880aecf4e07eb42188b5b1387))
+
+
 ## v1.24.1 (2026-06-02)
 
 ### Bug Fixes

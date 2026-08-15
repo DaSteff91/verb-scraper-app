@@ -14,7 +14,7 @@ from sqlalchemy.engine import Engine
 from src.config import Config
 from src.extensions import db
 
-__version__ = "1.24.1"
+__version__ = "1.24.2"
 
 
 @event.listens_for(Engine, "connect")
